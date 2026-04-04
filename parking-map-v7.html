@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan du Parc</title>
+<style>
+  :root {
+    --libre: #22c55e;
+    --libre-bg: #bbf7d0;
+    --occupe: #ef4444;
+    --occupe-bg: #fecaca;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #3b82f6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--libre);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  /* Stats + légende */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+  }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+  }
+
+  .stat .val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat .lbl {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* Filtres */
+  .filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .filter-group label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .filter-group select,
+  .filter-group input[type="date"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+    transition: border-color 0.15s;
+  }
+
+  .filter-group select:focus,
+  .filter-group input[type="date"]:focus {
+    border-color: var(--accent);
+  }
+
+  /* Zone section */
+  .zone-section {
+    margin-bottom: 36px;
+  }
+
+  .zone-title {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  /* Grille stackée */
+  .grid-wrapper { overflow-x: auto; }
+
+  .grid {
+    display: grid;
+    gap: 0;
+    width: fit-content;
+  }
+
+  .col-header {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: center;
+    padding: 6px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 56px;
+  }
+
+  .row-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-right: 6px;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+  }
+
+  .spot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+
+  .spot:hover { transform: scale(1.15); z-index: 10; }
+
+  .spot.libre {
+    background: var(--libre);
+    box-shadow: 0 2px 6px rgba(34,197,94,0.3);
+  }
+
+  .spot.occupe {
+    background: var(--occupe);
+    box-shadow: 0 2px 6px rgba(239,68,68,0.3);
+  }
+
+  .spot.vide {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Places uniques — rangée horizontale */
+  .uniques-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  /* Tooltip */
+  .spot-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #f1f5f9;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .spot:hover .spot-tooltip { display: block; }
+
+  /* Loading / Error */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2;
+    border: 1px solid var(--occupe);
+    border-radius: 8px;
+    padding: 16px;
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .spot { width: 32px; height: 32px; }
+    .col-header { font-size: 0.58rem; max-width: 44px; }
+    .filters { gap: 8px; }
+  }
+
+  /* Modale */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 320px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text);
+  }
+
+  .modal-place {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+
+  .modal-row:last-child { border-bottom: none; }
+
+  .modal-label {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .modal-value {
+    font-weight: 600;
+    text-align: right;
+    color: var(--text);
+  }
+
+  .modal-loading {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+    padding: 16px 0;
+  }
+
+</style>
+</head>
+<body>
+
+<script>
+// ═══════════════════════════════════════════
+//  CONFIGURATION
+// ═══════════════════════════════════════════
+const CONFIG = {
+  AIRTABLE_TOKEN: "VOTRE_TOKEN_ICI",
+  BASE_ID:        "VOTRE_BASE_ID_ICI",
+  REFRESH_SECONDS: 60,
+};
+// ═══════════════════════════════════════════
+</script>
+
+<div class="header">
+  <h1>Plan du Parc</h1>
+  <div class="status">
+    <div class="pulse"></div>
+    <span id="lastUpdate">—</span>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--libre)"></div>
+      Libre
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--occupe)"></div>
+      Occupée
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Date</label>
+    <input type="date" id="filterDate">
+  </div>
+  <div class="filter-group">
+    <label>Sous-zone</label>
+    <select id="filterZone">
+      <option value="">Toutes les zones</option>
+    </select>
+  </div>
+</div>
+
+<div id="content">
+  <div class="loading"><div class="spinner"></div> Chargement...</div>
+</div>
+
+<script>
+// ─── Init date à aujourd'hui ───────────────
+const today = new Date();
+const todayStr = today.toISOString().split("T")[0];
+document.getElementById("filterDate").value = todayStr;
+
+// ─── Fetch Airtable avec pagination ───────
+async function fetchAll(table, fields) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent(table)}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || table}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+
+// ─── Chargement ───────────────────────────
+let allPlaces = [];
+let allOccupations = [];
+
+async function loadAll() {
+  const [placesRaw, occRaw] = await Promise.all([
+    fetchAll("Places", [
+      "Place_ID", "Ligne_Terrain", "Position_Terrain",
+      "Sous_zone", "Zone_principale", "Y",
+      "Type_Place", "Active"
+    ]),
+    fetchAll("Occupations", [
+      "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Réservations"
+    ])
+  ]);
+
+  allPlaces = placesRaw
+    .filter(r => r.fields.Active !== false)
+    .map(r => r.fields);
+
+  allOccupations = occRaw.map(r => ({
+    ...r.fields,
+    _reservationIds: r.fields["Réservations"] || []
+  }));
+
+  // Peupler le filtre sous-zone
+  const zones = [...new Set(
+    allPlaces.map(p => (Array.isArray(p.Sous_zone) ? p.Sous_zone[0] : p.Sous_zone) || p.Zone_principale || "Principal")
+  )].sort();
+
+  const sel = document.getElementById("filterZone");
+  sel.innerHTML = `<option value="">Toutes les zones</option>`;
+  zones.forEach(z => {
+    const opt = document.createElement("option");
+    opt.value = z;
+    opt.textContent = z;
+    sel.appendChild(opt);
+  });
+}
+
+// ─── Calcul statut à une date donnée ──────
+function getStatutAtDate(placeId, dateStr) {
+  const ts = new Date(dateStr + "T12:00:00").getTime(); // midi de la journée choisie
+  const match = allOccupations.find(o => {
+    const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
+    if (pid !== placeId) return false;
+    const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
+    const fin = o.Date_Fin ? new Date(o.Date_Fin).getTime() : null;
+    if (!debut || !fin) return false;
+    return debut <= ts && fin >= ts;
+  });
+  return match ? "Occupée" : "Libre";
+}
+
+// ─── Rendu ────────────────────────────────
+function render() {
+  const dateStr = document.getElementById("filterDate").value || todayStr;
+  const zoneFilter = document.getElementById("filterZone").value;
+
+  // Filtrer par sous-zone
+  const places = zoneFilter
+    ? allPlaces.filter(p => {
+        const sz = (Array.isArray(p.Sous_zone) ? p.Sous_zone[0] : p.Sous_zone) || p.Zone_principale || "Principal";
+        return sz === zoneFilter;
+      })
+    : allPlaces;
+
+  // Calculer statut à la date choisie
+  const placesWithStatut = places.map(p => ({
+    ...p,
+    statut: getStatutAtDate(p.Place_ID, dateStr)
+  }));
+
+  // Stats
+  const libres = placesWithStatut.filter(p => p.statut === "Libre").length;
+  const occupes = placesWithStatut.filter(p => p.statut === "Occupée").length;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="val" style="color:var(--libre)">${libres}</div><div class="lbl">Libres</div></div>
+    <div class="stat"><div class="val" style="color:var(--occupe)">${occupes}</div><div class="lbl">Occupées</div></div>
+    <div class="stat"><div class="val">${placesWithStatut.length}</div><div class="lbl">Total</div></div>
+  `;
+
+  // Grouper par sous-zone
+  const zones = {};
+  placesWithStatut.forEach(p => {
+    const sz = (Array.isArray(p.Sous_zone) ? p.Sous_zone[0] : p.Sous_zone) || p.Zone_principale || "Principal";
+    if (!zones[sz]) zones[sz] = [];
+    zones[sz].push(p);
+  });
+
+  let html = "";
+
+  Object.entries(zones).forEach(([zone, zplaces]) => {
+    // Détecter les places "uniques" : même Ligne_Terrain + même Y partagés par plusieurs places
+    const ligneYCount = {};
+    zplaces.forEach(p => {
+      const key = `${p.Ligne_Terrain || "__none__"}__${p.Y ?? "__noy__"}`;
+      ligneYCount[key] = (ligneYCount[key] || 0) + 1;
+    });
+
+    // Uniques = plusieurs places partagent le même Ligne_Terrain + Y (pas distinguables en grille)
+    // Stackées = combinaison Ligne_Terrain + Y unique
+    const stackees = zplaces.filter(p => {
+      const key = `${p.Ligne_Terrain || "__none__"}__${p.Y ?? "__noy__"}`;
+      return ligneYCount[key] === 1 && p.Y != null && p.Ligne_Terrain;
+    });
+    const uniques = zplaces.filter(p => {
+      const key = `${p.Ligne_Terrain || "__none__"}__${p.Y ?? "__noy__"}`;
+      return ligneYCount[key] > 1 || p.Y == null || !p.Ligne_Terrain;
+    });
+
+    let zoneHtml = `<div class="zone-section"><div class="zone-title">${zone}</div>`;
+
+    // Grille stackée
+    if (stackees.length > 0) {
+      const lignes = [...new Set(stackees.map(p => p.Ligne_Terrain).filter(Boolean))].sort();
+      const yVals = [...new Set(stackees.map(p => p.Y).filter(v => v != null))].sort((a,b) => a - b);
+
+      const idx = {};
+      stackees.forEach(p => { idx[`${p.Ligne_Terrain}__${p.Y}`] = p; });
+
+      let cells = `<div class="row-header"></div>`;
+      lignes.forEach(l => { cells += `<div class="col-header">${l}</div>`; });
+
+      yVals.forEach(y => {
+        cells += `<div class="row-header">${y}</div>`;
+        lignes.forEach(l => {
+          const p = idx[`${l}__${y}`];
+          if (!p) {
+            cells += `<div class="cell"><div class="spot vide"></div></div>`;
+          } else {
+            const cls = p.statut === "Occupée" ? "occupe" : "libre";
+            const type = Array.isArray(p.Type_Place) ? p.Type_Place[0] || "" : (p.Type_Place || "");
+            const clickHandler = p.statut === "Occupée" ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
+            cells += `
+              <div class="cell">
+                <div class="spot ${cls}" ${clickHandler} style="${p.statut === 'Occupée' ? 'cursor:pointer' : ''}">
+                  <div class="spot-tooltip">${p.Place_ID}${type ? ' · ' + type : ''}</div>
+                </div>
+              </div>`;
+          }
+        });
+      });
+
+      zoneHtml += `
+        <div class="grid-wrapper">
+          <div class="grid" style="grid-template-columns: 32px repeat(${lignes.length}, 56px)">
+            ${cells}
+          </div>
+        </div>`;
+    }
+
+    // Places uniques — rangée horizontale
+    if (uniques.length > 0) {
+      zoneHtml += `
+        <div style="margin-top:${stackees.length > 0 ? '16px' : '0'}">
+          <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Places uniques</div>
+          <div class="uniques-row">
+            ${uniques.map(p => {
+              const cls = p.statut === "Occupée" ? "occupe" : "libre";
+              const type = Array.isArray(p.Type_Place) ? p.Type_Place[0] || "" : (p.Type_Place || "");
+              const clickU = p.statut === "Occupée" ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
+              return `
+                <div class="spot ${cls}" style="flex-shrink:0;${p.statut === 'Occupée' ? 'cursor:pointer' : ''}" ${clickU}>
+                  <div class="spot-tooltip">${p.Place_ID}${type ? ' · ' + type : ''}</div>
+                </div>`;
+            }).join("")}
+          </div>
+        </div>`;
+    }
+
+    zoneHtml += `</div>`;
+    html += zoneHtml;
+  });
+
+  document.getElementById("content").innerHTML = html || `<div class="loading">Aucune place trouvée</div>`;
+}
+
+
+// ─── Modale réservation ───────────────────
+async function openModal(placeId, dateStr) {
+  const overlay = document.getElementById("modalOverlay");
+  document.getElementById("modalPlaceId").textContent = placeId;
+  document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Chargement...</div>`;
+  overlay.classList.add("open");
+
+  // Trouver l'occupation active à la date choisie
+  const ts = new Date(dateStr + "T12:00:00").getTime();
+  const occ = allOccupations.find(o => {
+    const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
+    if (pid !== placeId) return false;
+    const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
+    const fin = o.Date_Fin ? new Date(o.Date_Fin).getTime() : null;
+    return debut && fin && debut <= ts && fin >= ts;
+  });
+
+  if (!occ || !occ._reservationIds || occ._reservationIds.length === 0) {
+    document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Aucune réservation liée.</div>`;
+    return;
+  }
+
+  // Charger la réservation depuis Airtable
+  try {
+    const resaId = occ._reservationIds[0];
+    const tableName = encodeURIComponent("Réservations");
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableName}/${resaId}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+    if (!res.ok) throw new Error(`Erreur ${res.status}`);
+    const data = await res.json();
+    const f = data.fields;
+
+    const fmt = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }) : "—";
+
+    const services = Array.isArray(f.Services) ? f.Services.join(", ") : (f.Services || "—");
+
+    document.getElementById("modalContent").innerHTML = `
+      <div class="modal-row">
+        <span class="modal-label">Référence</span>
+        <span class="modal-value">${f.Client_Booking_Ref || f.Booking_ID || "—"}</span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Véhicule</span>
+        <span class="modal-value">${f.Vehicule_Modele || "—"}</span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Couleur</span>
+        <span class="modal-value">${f.Vehicule_Couleur || "—"}</span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Arrivée</span>
+        <span class="modal-value">${fmt(f.DateHeure_Arrivee)}</span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Retour</span>
+        <span class="modal-value">${fmt(f.DateHeure_Retour)}</span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Services</span>
+        <span class="modal-value">${services}</span>
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Erreur : ${e.message}</div>`;
+  }
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById("modalOverlay")) {
+    document.getElementById("modalOverlay").classList.remove("open");
+  }
+}
+
+// ─── Refresh auto ─────────────────────────
+async function refresh() {
+  try {
+    await loadAll();
+    render();
+    const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+  } catch(e) {
+    document.getElementById("content").innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  }
+  setTimeout(refresh, CONFIG.REFRESH_SECONDS * 1000);
+}
+
+// Écouter les filtres
+document.getElementById("filterDate").addEventListener("change", render);
+document.getElementById("filterZone").addEventListener("change", render);
+
+refresh();
+</script>
+
+<!-- Modale réservation -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Réservation</div>
+        <div class="modal-place" id="modalPlaceId"></div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('modalOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div id="modalContent"><div class="modal-loading">Chargement...</div></div>
+  </div>
+</div>
+
+</body>
+</html>
