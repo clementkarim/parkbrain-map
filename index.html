@@ -11,7 +11,6 @@
     --occupe: #ef4444;
     --occupe-bg: #fecaca;
     --transit: #f59e0b;
-    --transit-bg: #fef3c7;
     --bg: #f8fafc;
     --surface: #ffffff;
     --border: #e2e8f0;
@@ -161,9 +160,7 @@
     border-color: var(--accent);
   }
 
-  .zone-section {
-    margin-bottom: 36px;
-  }
+  .zone-section { margin-bottom: 36px; }
 
   .zone-title {
     font-size: 1rem;
@@ -321,9 +318,7 @@
     justify-content: center;
   }
 
-  .modal-overlay.open {
-    display: flex;
-  }
+  .modal-overlay.open { display: flex; }
 
   .modal {
     background: var(--surface);
@@ -410,8 +405,8 @@
 
 <script>
 const CONFIG = {
-  AIRTABLE_TOKEN: "VOTRE_TOKEN_ICI",
-  BASE_ID:        "VOTRE_BASE_ID_ICI",
+  AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
+  BASE_ID:        "appTqMfNzSpj2yv7b",
   REFRESH_SECONDS: 60,
 };
 </script>
@@ -495,30 +490,23 @@ let allOccupations = [];
 
 async function loadAll() {
   const [placesRaw, occRaw] = await Promise.all([
-    fetchAll("tbl06R7THmL2IvJcR", [
+    fetchAll("Places", [
       "Place_ID", "Ligne_Terrain", "Position_Terrain",
       "Sous_zone", "Zone_principale", "Y",
       "Type_Place", "Active"
     ]),
-    fetchAll("tbl6IxnnUrKQpbj2e", [
-      "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Reservations"
+    fetchAll("Occupations", [
+      "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Réservations"
     ])
   ]);
 
-  // Pas de filtre Active — on affiche toutes les places
+  // Pas de filtre Active — toutes les places
   allPlaces = placesRaw.map(r => r.fields);
 
-  allOccupations = occRaw.map(r => {
-    // Chercher le champ réservations avec ou sans accent
-    const resaIds = r.fields["Reservations"]
-      || r.fields["R\u00e9servations"]
-      || r.fields["reservations"]
-      || [];
-    return {
-      ...r.fields,
-      _reservationIds: resaIds
-    };
-  });
+  allOccupations = occRaw.map(r => ({
+    ...r.fields,
+    _reservationIds: r.fields["Réservations"] || []
+  }));
 
   const zones = [...new Set(
     allPlaces.map(p => (Array.isArray(p.Sous_zone) ? p.Sous_zone[0] : p.Sous_zone) || p.Zone_principale || "Principal")
@@ -576,8 +564,8 @@ function render() {
   }));
 
   const libres  = placesWithStatut.filter(p => p.statut === "Libre").length;
-  const occupes = placesWithStatut.filter(p => p.statut === "Occupée").length;
   const transits = placesWithStatut.filter(p => p.statut === "Transit").length;
+  const occupes = placesWithStatut.filter(p => p.statut === "Occupée").length;
 
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="val" style="color:var(--libre)">${libres}</div><div class="lbl">Libres</div></div>
@@ -660,10 +648,10 @@ function render() {
             ${uniques.map(p => {
               const cls = p.statut === "Occupée" ? "occupe" : p.statut === "Transit" ? "transit" : "libre";
               const type = Array.isArray(p.Type_Place) ? p.Type_Place[0] || "" : (p.Type_Place || "");
-              const isClickableU = p.statut === "Occupée" || p.statut === "Transit";
-              const clickU = isClickableU ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
+              const isClickable = p.statut === "Occupée" || p.statut === "Transit";
+              const clickU = isClickable ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
               return `
-                <div class="spot ${cls}" style="flex-shrink:0;${isClickableU ? 'cursor:pointer' : ''}" ${clickU}>
+                <div class="spot ${cls}" style="flex-shrink:0;${isClickable ? 'cursor:pointer' : ''}" ${clickU}>
                   <div class="spot-tooltip">${p.Place_ID}${type ? ' · ' + type : ''}</div>
                 </div>`;
             }).join("")}
@@ -700,8 +688,9 @@ async function openModal(placeId, dateStr) {
 
   try {
     const resaId = occ._reservationIds[0];
+    const tableName = encodeURIComponent("Réservations");
     const res = await fetch(
-      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent("tbldQLLisQm9aZciJ")}/${resaId}`,
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableName}/${resaId}`,
       { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
     );
     if (!res.ok) throw new Error(`Erreur ${res.status}`);
