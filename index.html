@@ -495,12 +495,12 @@ let allOccupations = [];
 
 async function loadAll() {
   const [placesRaw, occRaw] = await Promise.all([
-    fetchAll("Places", [
+    fetchAll("tbl06R7THmL2IvJcR", [
       "Place_ID", "Ligne_Terrain", "Position_Terrain",
       "Sous_zone", "Zone_principale", "Y",
       "Type_Place", "Active"
     ]),
-    fetchAll("Occupations", [
+    fetchAll("tbl6IxnnUrKQpbj2e", [
       "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Reservations"
     ])
   ]);
@@ -701,7 +701,7 @@ async function openModal(placeId, dateStr) {
   try {
     const resaId = occ._reservationIds[0];
     const res = await fetch(
-      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent("R\u00e9servations")}/${resaId}`,
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent("tbldQLLisQm9aZciJ")}/${resaId}`,
       { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
     );
     if (!res.ok) throw new Error(`Erreur ${res.status}`);
