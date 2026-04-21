@@ -7,10 +7,9 @@
 <style>
   :root {
     --libre: #22c55e;
-    --libre-bg: #bbf7d0;
     --occupe: #ef4444;
-    --occupe-bg: #fecaca;
-    --transit: #f59e0b;
+    --arrivee: #3b82f6;
+    --depart: #f59e0b;
     --bg: #f8fafc;
     --surface: #ffffff;
     --border: #e2e8f0;
@@ -76,25 +75,32 @@
 
   .legend {
     display: flex;
-    gap: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   .legend-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--muted);
   }
 
   .legend-dot {
     width: 14px; height: 14px;
     border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.split {
+    background: linear-gradient(90deg, var(--depart) 50%, var(--arrivee) 50%);
   }
 
   .stats {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .stat {
@@ -222,6 +228,7 @@
     cursor: default;
     transition: transform 0.15s, box-shadow 0.15s;
     position: relative;
+    overflow: hidden;
   }
 
   .spot:hover { transform: scale(1.15); z-index: 10; }
@@ -236,9 +243,20 @@
     box-shadow: 0 2px 6px rgba(239,68,68,0.3);
   }
 
-  .spot.transit {
-    background: var(--transit);
+  .spot.arrivee {
+    background: var(--arrivee);
+    box-shadow: 0 2px 6px rgba(59,130,246,0.3);
+  }
+
+  .spot.depart {
+    background: var(--depart);
     box-shadow: 0 2px 6px rgba(245,158,11,0.3);
+  }
+
+  /* Pastille scindée moitié orange / moitié bleu */
+  .spot.transition {
+    background: linear-gradient(90deg, var(--depart) 50%, var(--arrivee) 50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
 
   .spot.vide {
@@ -308,6 +326,7 @@
     .filters { gap: 8px; }
   }
 
+  /* Modale */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -325,10 +344,12 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 24px;
-    width: 320px;
+    width: 340px;
     max-width: 90vw;
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
   .modal-header {
@@ -367,12 +388,29 @@
 
   .modal-close:hover { background: var(--border); }
 
+  .modal-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .modal-section-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   .modal-row {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
-    padding: 8px 0;
+    padding: 7px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.8rem;
   }
@@ -399,14 +437,20 @@
     font-size: 0.82rem;
     padding: 16px 0;
   }
+
+  .modal-divider {
+    border: none;
+    border-top: 2px dashed var(--border);
+    margin: 12px 0;
+  }
 </style>
 </head>
 <body>
 
 <script>
 const CONFIG = {
-  AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
-  BASE_ID:        "appTqMfNzSpj2yv7b",
+  AIRTABLE_TOKEN: "VOTRE_TOKEN_ICI",
+  BASE_ID:        "VOTRE_BASE_ID_ICI",
   REFRESH_SECONDS: 60,
 };
 </script>
@@ -426,8 +470,16 @@ const CONFIG = {
       Libre
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:var(--transit)"></div>
-      Arrivée / Départ
+      <div class="legend-dot" style="background:var(--arrivee)"></div>
+      Arrivée
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--depart)"></div>
+      Départ
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot split"></div>
+      Arrivée + Départ
     </div>
     <div class="legend-item">
       <div class="legend-dot" style="background:var(--occupe)"></div>
@@ -487,9 +539,10 @@ async function fetchAll(table, fields) {
 
 let allPlaces = [];
 let allOccupations = [];
+let allReservations = [];
 
 async function loadAll() {
-  const [placesRaw, occRaw] = await Promise.all([
+  const [placesRaw, occRaw, resaRaw] = await Promise.all([
     fetchAll("Places", [
       "Place_ID", "Ligne_Terrain", "Position_Terrain",
       "Sous_zone", "Zone_principale", "Y",
@@ -497,16 +550,22 @@ async function loadAll() {
     ]),
     fetchAll("Occupations", [
       "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Réservations"
+    ]),
+    fetchAll("Réservations", [
+      "Booking_ID", "Client_Booking_Ref", "Place_Assignee_Code",
+      "DateHeure_Arrivee", "DateHeure_Retour",
+      "Vehicule_Modele", "Vehicule_Couleur", "Services"
     ])
   ]);
 
-  // Pas de filtre Active — toutes les places
   allPlaces = placesRaw.map(r => r.fields);
 
   allOccupations = occRaw.map(r => ({
     ...r.fields,
     _reservationIds: r.fields["Réservations"] || []
   }));
+
+  allReservations = resaRaw.map(r => r.fields);
 
   const zones = [...new Set(
     allPlaces.map(p => (Array.isArray(p.Sous_zone) ? p.Sous_zone[0] : p.Sous_zone) || p.Zone_principale || "Principal")
@@ -522,11 +581,13 @@ async function loadAll() {
   });
 }
 
+// ─── Calcul statut ────────────────────────
 function getStatutAtDate(placeId, dateStr) {
   const dayStart = new Date(dateStr + "T00:00:00").getTime();
   const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
 
-  const match = allOccupations.find(o => {
+  // Chercher une occupation qui chevauche la journée
+  const occ = allOccupations.find(o => {
     const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
     if (pid !== placeId) return false;
     const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
@@ -535,18 +596,26 @@ function getStatutAtDate(placeId, dateStr) {
     return debut <= dayEnd && fin >= dayStart;
   });
 
-  if (!match) return "Libre";
+  // Chercher une réservation entrante (arrivée dans la journée)
+  const resaEntrant = allReservations.find(r => {
+    const code = Array.isArray(r.Place_Assignee_Code) ? r.Place_Assignee_Code[0] : r.Place_Assignee_Code;
+    if (code !== placeId) return false;
+    const arrivee = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+    if (!arrivee) return false;
+    return arrivee >= dayStart && arrivee <= dayEnd;
+  });
 
-  const debut = new Date(match.Date_Debut).getTime();
-  const fin   = new Date(match.Date_Fin).getTime();
+  const hasDepart = occ && new Date(occ.Date_Fin).getTime() <= dayEnd && new Date(occ.Date_Fin).getTime() >= dayStart;
+  const hasArrivee = !!resaEntrant;
 
-  const debutDansJournee = debut >= dayStart && debut <= dayEnd;
-  const finDansJournee   = fin   >= dayStart && fin   <= dayEnd;
-
-  if (debutDansJournee || finDansJournee) return "Transit";
-  return "Occupée";
+  if (hasDepart && hasArrivee) return "transition";
+  if (hasDepart) return "depart";
+  if (hasArrivee) return "arrivee";
+  if (occ) return "occupe";
+  return "libre";
 }
 
+// ─── Rendu ────────────────────────────────
 function render() {
   const dateStr = document.getElementById("filterDate").value || todayStr;
   const zoneFilter = document.getElementById("filterZone").value;
@@ -563,13 +632,15 @@ function render() {
     statut: getStatutAtDate(p.Place_ID, dateStr)
   }));
 
-  const libres  = placesWithStatut.filter(p => p.statut === "Libre").length;
-  const transits = placesWithStatut.filter(p => p.statut === "Transit").length;
-  const occupes = placesWithStatut.filter(p => p.statut === "Occupée").length;
+  const libres    = placesWithStatut.filter(p => p.statut === "libre").length;
+  const arrivees  = placesWithStatut.filter(p => p.statut === "arrivee" || p.statut === "transition").length;
+  const departs   = placesWithStatut.filter(p => p.statut === "depart" || p.statut === "transition").length;
+  const occupes   = placesWithStatut.filter(p => p.statut === "occupe").length;
 
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="val" style="color:var(--libre)">${libres}</div><div class="lbl">Libres</div></div>
-    <div class="stat"><div class="val" style="color:var(--transit)">${transits}</div><div class="lbl">Arr./Dép.</div></div>
+    <div class="stat"><div class="val" style="color:var(--arrivee)">${arrivees}</div><div class="lbl">Arrivées</div></div>
+    <div class="stat"><div class="val" style="color:var(--depart)">${departs}</div><div class="lbl">Départs</div></div>
     <div class="stat"><div class="val" style="color:var(--occupe)">${occupes}</div><div class="lbl">Occupées</div></div>
     <div class="stat"><div class="val">${placesWithStatut.length}</div><div class="lbl">Total</div></div>
   `;
@@ -604,7 +675,6 @@ function render() {
     if (stackees.length > 0) {
       const lignes = [...new Set(stackees.map(p => p.Ligne_Terrain).filter(Boolean))].sort();
       const yVals = [...new Set(stackees.map(p => p.Y).filter(v => v != null))].sort((a,b) => a - b);
-
       const idx = {};
       stackees.forEach(p => { idx[`${p.Ligne_Terrain}__${p.Y}`] = p; });
 
@@ -618,14 +688,12 @@ function render() {
           if (!p) {
             cells += `<div class="cell"><div class="spot vide"></div></div>`;
           } else {
-            const cls = p.statut === "Occupée" ? "occupe" : p.statut === "Transit" ? "transit" : "libre";
-            const type = Array.isArray(p.Type_Place) ? p.Type_Place[0] || "" : (p.Type_Place || "");
-            const isClickable = p.statut === "Occupée" || p.statut === "Transit";
+            const isClickable = p.statut !== "libre";
             const clickHandler = isClickable ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
             cells += `
               <div class="cell">
-                <div class="spot ${cls}" ${clickHandler} style="${isClickable ? 'cursor:pointer' : ''}">
-                  <div class="spot-tooltip">${p.Place_ID}${type ? ' · ' + type : ''}</div>
+                <div class="spot ${p.statut}" ${clickHandler} style="${isClickable ? 'cursor:pointer' : ''}">
+                  <div class="spot-tooltip">${p.Place_ID}</div>
                 </div>
               </div>`;
           }
@@ -646,13 +714,11 @@ function render() {
           <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Places uniques</div>
           <div class="uniques-row">
             ${uniques.map(p => {
-              const cls = p.statut === "Occupée" ? "occupe" : p.statut === "Transit" ? "transit" : "libre";
-              const type = Array.isArray(p.Type_Place) ? p.Type_Place[0] || "" : (p.Type_Place || "");
-              const isClickable = p.statut === "Occupée" || p.statut === "Transit";
+              const isClickable = p.statut !== "libre";
               const clickU = isClickable ? `onclick="openModal('${p.Place_ID}', '${dateStr}')"` : "";
               return `
-                <div class="spot ${cls}" style="flex-shrink:0;${isClickable ? 'cursor:pointer' : ''}" ${clickU}>
-                  <div class="spot-tooltip">${p.Place_ID}${type ? ' · ' + type : ''}</div>
+                <div class="spot ${p.statut}" style="flex-shrink:0;${isClickable ? 'cursor:pointer' : ''}" ${clickU}>
+                  <div class="spot-tooltip">${p.Place_ID}</div>
                 </div>`;
             }).join("")}
           </div>
@@ -666,70 +732,98 @@ function render() {
   document.getElementById("content").innerHTML = html || `<div class="loading">Aucune place trouvée</div>`;
 }
 
+// ─── Modale ───────────────────────────────
+function buildResaHtml(f, couleur, titre) {
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  }) : "—";
+  const services = Array.isArray(f.Services) ? f.Services.join(", ") : (f.Services || "—");
+
+  return `
+    <div class="modal-section-title">
+      <div class="modal-section-dot" style="background:${couleur}"></div>
+      ${titre}
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Référence</span>
+      <span class="modal-value">${f.Client_Booking_Ref || f.Booking_ID || "—"}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Véhicule</span>
+      <span class="modal-value">${f.Vehicule_Modele || "—"}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Couleur</span>
+      <span class="modal-value">${f.Vehicule_Couleur || "—"}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Arrivée</span>
+      <span class="modal-value">${fmt(f.DateHeure_Arrivee)}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Retour</span>
+      <span class="modal-value">${fmt(f.DateHeure_Retour)}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Services</span>
+      <span class="modal-value">${services}</span>
+    </div>
+  `;
+}
+
 async function openModal(placeId, dateStr) {
   const overlay = document.getElementById("modalOverlay");
   document.getElementById("modalPlaceId").textContent = placeId;
   document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Chargement...</div>`;
   overlay.classList.add("open");
 
+  const dayStart = new Date(dateStr + "T00:00:00").getTime();
+  const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
   const ts = new Date(dateStr + "T12:00:00").getTime();
-  const occ = allOccupations.find(o => {
-    const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
-    if (pid !== placeId) return false;
-    const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
-    const fin = o.Date_Fin ? new Date(o.Date_Fin).getTime() : null;
-    return debut && fin && debut <= ts && fin >= ts;
-  });
-
-  if (!occ || !occ._reservationIds || occ._reservationIds.length === 0) {
-    document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Aucune réservation liée.</div>`;
-    return;
-  }
 
   try {
-    const resaId = occ._reservationIds[0];
-    const tableName = encodeURIComponent("Réservations");
-    const res = await fetch(
-      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableName}/${resaId}`,
-      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
-    );
-    if (!res.ok) throw new Error(`Erreur ${res.status}`);
-    const data = await res.json();
-    const f = data.fields;
+    let html = "";
 
-    const fmt = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
-      day: "2-digit", month: "2-digit", year: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    }) : "—";
+    // 1. Réservation sortante (occupation qui se termine aujourd'hui)
+    const occ = allOccupations.find(o => {
+      const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
+      if (pid !== placeId) return false;
+      const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
+      const fin   = o.Date_Fin   ? new Date(o.Date_Fin).getTime()   : null;
+      return debut && fin && debut <= dayEnd && fin >= dayStart;
+    });
 
-    const services = Array.isArray(f.Services) ? f.Services.join(", ") : (f.Services || "—");
+    if (occ && occ._reservationIds && occ._reservationIds.length > 0) {
+      const resaId = occ._reservationIds[0];
+      const res = await fetch(
+        `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent("Réservations")}/${resaId}`,
+        { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const finOcc = new Date(occ.Date_Fin).getTime();
+        const titre = finOcc >= dayStart && finOcc <= dayEnd ? "Départ" : "En cours";
+        const couleur = finOcc >= dayStart && finOcc <= dayEnd ? "var(--depart)" : "var(--occupe)";
+        html += buildResaHtml(data.fields, couleur, titre);
+      }
+    }
 
-    document.getElementById("modalContent").innerHTML = `
-      <div class="modal-row">
-        <span class="modal-label">Référence</span>
-        <span class="modal-value">${f.Client_Booking_Ref || f.Booking_ID || "—"}</span>
-      </div>
-      <div class="modal-row">
-        <span class="modal-label">Véhicule</span>
-        <span class="modal-value">${f.Vehicule_Modele || "—"}</span>
-      </div>
-      <div class="modal-row">
-        <span class="modal-label">Couleur</span>
-        <span class="modal-value">${f.Vehicule_Couleur || "—"}</span>
-      </div>
-      <div class="modal-row">
-        <span class="modal-label">Arrivée</span>
-        <span class="modal-value">${fmt(f.DateHeure_Arrivee)}</span>
-      </div>
-      <div class="modal-row">
-        <span class="modal-label">Retour</span>
-        <span class="modal-value">${fmt(f.DateHeure_Retour)}</span>
-      </div>
-      <div class="modal-row">
-        <span class="modal-label">Services</span>
-        <span class="modal-value">${services}</span>
-      </div>
-    `;
+    // 2. Réservation entrante (arrivée aujourd'hui sur cette place)
+    const resaEntrant = allReservations.find(r => {
+      const code = Array.isArray(r.Place_Assignee_Code) ? r.Place_Assignee_Code[0] : r.Place_Assignee_Code;
+      if (code !== placeId) return false;
+      const arrivee = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+      return arrivee && arrivee >= dayStart && arrivee <= dayEnd;
+    });
+
+    if (resaEntrant) {
+      if (html) html += `<hr class="modal-divider">`;
+      html += buildResaHtml(resaEntrant, "var(--arrivee)", "Arrivée");
+    }
+
+    document.getElementById("modalContent").innerHTML = html || `<div class="modal-loading">Aucune réservation trouvée.</div>`;
+
   } catch(e) {
     document.getElementById("modalContent").innerHTML = `<div class="modal-loading">Erreur : ${e.message}</div>`;
   }
