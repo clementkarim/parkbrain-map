@@ -408,6 +408,38 @@
 
   .algo-info strong { font-weight: 700; }
 
+  .filter-date {
+    margin-bottom: 16px;
+  }
+
+  .filter-date label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .filter-date input[type="date"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+    transition: border-color 0.15s;
+  }
+
+  .filter-date input[type="date"]:focus {
+    border-color: var(--accent);
+  }
+
   @media (max-width: 400px) {
     body { padding: 12px; }
   }
@@ -431,6 +463,11 @@ const CONFIG = {
     <div class="pulse"></div>
     <span id="lastUpdate">—</span>
   </div>
+</div>
+
+<div class="filter-date">
+  <label>Date</label>
+  <input type="date" id="filterDate">
 </div>
 
 <div class="stats" id="stats"></div>
@@ -476,6 +513,10 @@ const CONFIG = {
 // ─── État global ──────────────────────────
 const today = new Date();
 const todayStr = today.toISOString().split("T")[0];
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("filterDate").value = todayStr;
+  document.getElementById("filterDate").addEventListener("change", () => refresh());
+});
 
 let allReservations = [];
 let placesIndex = {}; // Ligne_Terrain -> [Y values]
@@ -558,9 +599,10 @@ async function loadAll() {
     placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
   });
 
-  // Filtrer réservations : arrivée aujourd'hui + pas encore Garée
-  const dayStartTs = new Date(todayStr + "T00:00:00").getTime();
-  const dayEndTs   = new Date(todayStr + "T23:59:59").getTime();
+  // Filtrer réservations : arrivée à la date sélectionnée + pas encore Garée
+  const selectedDate = document.getElementById("filterDate")?.value || todayStr;
+  const dayStartTs = new Date(selectedDate + "T00:00:00").getTime();
+  const dayEndTs   = new Date(selectedDate + "T23:59:59").getTime();
 
   allReservations = resaRaw
     .filter(r => {
