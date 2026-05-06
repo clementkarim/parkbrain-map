@@ -715,24 +715,16 @@ function onLigneChange() {
   const selY = document.getElementById("selectY");
   const hint = document.getElementById("yHint");
 
+  document.getElementById("btnSave").disabled = true;
+
   if (!ligne) {
     selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
     selY.disabled = true;
     hint.textContent = "";
-    document.getElementById("btnSave").disabled = true;
     return;
   }
 
   const yVals = placesIndex[ligne] || [];
-  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
-  yVals.forEach(y => {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = `Profondeur ${y}`;
-    sel.appendChild(opt);
-  });
-
-  // Fix: use selY not sel
   selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
   yVals.forEach(y => {
     const opt = document.createElement("option");
@@ -743,11 +735,10 @@ function onLigneChange() {
 
   selY.disabled = false;
   hint.textContent = `${yVals.length} profondeur(s) disponible(s) sur cette ligne`;
-  document.getElementById("btnSave").disabled = true;
 
-selY.addEventListener("change", () => {
+  selY.addEventListener("change", () => {
     document.getElementById("btnSave").disabled = !selY.value;
-});
+  });
 }
 
 function closeModal() {
