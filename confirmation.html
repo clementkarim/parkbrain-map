@@ -745,9 +745,9 @@ function onLigneChange() {
   hint.textContent = `${yVals.length} profondeur(s) disponible(s) sur cette ligne`;
   document.getElementById("btnSave").disabled = true;
 
-  selY.onchange = () => {
+selY.addEventListener("change", () => {
     document.getElementById("btnSave").disabled = !selY.value;
-  };
+});
 }
 
 function closeModal() {
