@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmations Terrain</title>
+<style>
+  :root {
+    --libre: #22c55e;
+    --occupe: #ef4444;
+    --warning: #f59e0b;
+    --accent: #3b82f6;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --success: #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .stat .val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat .lbl {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* Liste réservations */
+  .resa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .resa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    transition: box-shadow 0.15s;
+  }
+
+  .resa-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .resa-card.confirmed {
+    border-color: var(--success);
+    background: #f0fdf4;
+    opacity: 0.7;
+  }
+
+  .resa-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .resa-ref {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .resa-time {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-confirmed {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .resa-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-label {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .detail-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .detail-value.algo {
+    color: var(--accent);
+  }
+
+  .resa-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-confirm {
+    flex: 1;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .btn-confirm:hover { background: #2563eb; }
+  .btn-confirm:disabled {
+    background: var(--success);
+    cursor: default;
+  }
+
+  /* Loading / Error */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2;
+    border: 1px solid var(--occupe);
+    border-radius: 8px;
+    padding: 16px;
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* Modale confirmation */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .modal-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .form-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .form-select:focus { border-color: var(--accent); }
+  .form-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .form-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+    transition: background 0.15s;
+  }
+
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-save {
+    flex: 2;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .btn-save:hover { background: #16a34a; }
+  .btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .algo-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 0.78rem;
+    color: #1e40af;
+  }
+
+  .algo-info strong { font-weight: 700; }
+
+  @media (max-width: 400px) {
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG = {
+  AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
+  BASE_ID:        "appTqMfNzSpj2yv7b",
+  TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
+  TABLE_PLACES:       "tbl06R7THmL2IvJcR",
+  REFRESH_SECONDS: 60,
+};
+</script>
+
+<div class="header">
+  <h1>Confirmations Terrain</h1>
+  <div class="status">
+    <div class="pulse"></div>
+    <span id="lastUpdate">—</span>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="content">
+  <div class="loading"><div class="spinner"></div> Chargement...</div>
+</div>
+
+<!-- Modale confirmation place -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Confirmer la place</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-subtitle" id="modalSubtitle">—</div>
+
+    <div class="algo-info" id="algoInfo"></div>
+
+    <div class="form-group">
+      <label class="form-label">Ligne terrain</label>
+      <select class="form-select" id="selectLigne" onchange="onLigneChange()">
+        <option value="">Sélectionner une ligne...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Profondeur (Y)</label>
+      <select class="form-select" id="selectY" disabled>
+        <option value="">Sélectionner d'abord une ligne...</option>
+      </select>
+      <div class="form-hint" id="yHint"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" id="btnSave" onclick="saveConfirmation()" disabled>✓ Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── État global ──────────────────────────
+const today = new Date();
+const todayStr = today.toISOString().split("T")[0];
+
+let allReservations = [];
+let placesIndex = {}; // Ligne_Terrain -> [Y values]
+let currentResaRecordId = null;
+let currentResaRef = null;
+
+// ─── API Airtable ─────────────────────────
+async function fetchAll(tableId, fields, formula) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (formula) params.set("filterByFormula", formula);
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || tableId}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+
+async function patchRecord(tableId, recordId, fields) {
+  const res = await fetch(
+    `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}/${recordId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ fields })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Erreur PATCH ${res.status} — ${err.error?.message || ""}`);
+  }
+  return res.json();
+}
+
+// ─── Chargement ───────────────────────────
+async function loadAll() {
+  const dayStart = todayStr + "T00:00:00.000Z";
+  const dayEnd   = todayStr + "T23:59:59.000Z";
+
+  const [resaRaw, placesRaw] = await Promise.all([
+    fetchAll(CONFIG.TABLE_RESERVATIONS, [
+      "Booking_ID", "Client_Booking_Ref",
+      "Vehicule_Modele", "Vehicule_Couleur",
+      "DateHeure_Arrivee", "Place_Assignee_Ligne", "Place_Assignee_Y",
+      "Statut_Reservation", "Place_Terrain_Confirmee"
+    ]),
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
+  ]);
+
+  // Construire index Ligne_Terrain -> valeurs Y uniques triées
+  placesIndex = {};
+  placesRaw.forEach(r => {
+    const ligne = r.fields.Ligne_Terrain;
+    const y = r.fields.Y;
+    if (!ligne || y == null) return;
+    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+    placesIndex[ligne].add(y);
+  });
+  // Convertir Sets en arrays triés
+  Object.keys(placesIndex).forEach(k => {
+    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+  });
+
+  // Filtrer réservations : arrivée aujourd'hui + pas encore Garée
+  const dayStartTs = new Date(todayStr + "T00:00:00").getTime();
+  const dayEndTs   = new Date(todayStr + "T23:59:59").getTime();
+
+  allReservations = resaRaw
+    .filter(r => {
+      const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
+      const statut = r.fields.Statut_Reservation;
+      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée";
+    })
+    .map(r => ({ id: r.id, ...r.fields }))
+    .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
+}
+
+// ─── Rendu ────────────────────────────────
+function render() {
+  const total = allReservations.length;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat">
+      <div class="val" style="color:var(--warning)">${total}</div>
+      <div class="lbl">À confirmer</div>
+    </div>
+  `;
+
+  if (total === 0) {
+    document.getElementById("content").innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✅</div>
+        Toutes les arrivées du jour sont confirmées
+      </div>`;
+    return;
+  }
+
+  const fmt = iso => iso ? new Date(iso).toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit"
+  }) : "—";
+
+  const html = allReservations.map(r => {
+    const ligne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
+    const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
+
+    return `
+      <div class="resa-card" id="card-${r.id}">
+        <div class="resa-top">
+          <div>
+            <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
+            <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)}</div>
+          </div>
+          <span class="badge badge-pending">À confirmer</span>
+        </div>
+        <div class="resa-details">
+          <div class="detail-item">
+            <span class="detail-label">Véhicule</span>
+            <span class="detail-value">${r.Vehicule_Modele || "—"}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Couleur</span>
+            <span class="detail-value">${r.Vehicule_Couleur || "—"}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Ligne assignée</span>
+            <span class="detail-value algo">${ligne}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Profondeur assignée</span>
+            <span class="detail-value algo">${y}</span>
+          </div>
+        </div>
+        <div class="resa-actions">
+          <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
+            📍 Confirmer la place
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("content").innerHTML = `<div class="resa-list">${html}</div>`;
+}
+
+// ─── Modale ───────────────────────────────
+function openModal(recordId, ref, algoLigne, algoY) {
+  currentResaRecordId = recordId;
+  currentResaRef = ref;
+
+  document.getElementById("modalSubtitle").textContent = ref;
+  document.getElementById("algoInfo").innerHTML = `Place assignée moteur : <strong>${algoLigne} — profondeur ${algoY}</strong>`;
+
+  // Peupler liste Ligne_Terrain
+  const lignes = Object.keys(placesIndex).sort();
+  const sel = document.getElementById("selectLigne");
+  sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
+  lignes.forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l;
+    opt.textContent = l;
+    sel.appendChild(opt);
+  });
+
+  // Reset Y
+  const selY = document.getElementById("selectY");
+  selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+  selY.disabled = true;
+  document.getElementById("yHint").textContent = "";
+  document.getElementById("btnSave").disabled = true;
+
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function onLigneChange() {
+  const ligne = document.getElementById("selectLigne").value;
+  const selY = document.getElementById("selectY");
+  const hint = document.getElementById("yHint");
+
+  if (!ligne) {
+    selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+    selY.disabled = true;
+    hint.textContent = "";
+    document.getElementById("btnSave").disabled = true;
+    return;
+  }
+
+  const yVals = placesIndex[ligne] || [];
+  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
+  yVals.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `Profondeur ${y}`;
+    sel.appendChild(opt);
+  });
+
+  // Fix: use selY not sel
+  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
+  yVals.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `Profondeur ${y}`;
+    selY.appendChild(opt);
+  });
+
+  selY.disabled = false;
+  hint.textContent = `${yVals.length} profondeur(s) disponible(s) sur cette ligne`;
+  document.getElementById("btnSave").disabled = true;
+
+  selY.onchange = () => {
+    document.getElementById("btnSave").disabled = !selY.value;
+  };
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+  currentResaRecordId = null;
+}
+
+async function saveConfirmation() {
+  const ligne = document.getElementById("selectLigne").value;
+  const y = document.getElementById("selectY").value;
+
+  if (!ligne || !y) return;
+
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentResaRecordId, {
+      "Place_Terrain_Ligne": ligne,
+      "Place_Terrain_Y": parseFloat(y),
+      "Place_Terrain_Confirmee": true,
+      "Statut_Reservation": "Garée"
+    });
+
+    // Retirer la carte de la liste
+    allReservations = allReservations.filter(r => r.id !== currentResaRecordId);
+    closeModal();
+    render();
+
+    const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Valider";
+    alert(`Erreur : ${e.message}`);
+  }
+}
+
+// ─── Init ─────────────────────────────────
+async function refresh() {
+  try {
+    await loadAll();
+    render();
+    const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+  } catch(e) {
+    document.getElementById("content").innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  }
+  setTimeout(refresh, CONFIG.REFRESH_SECONDS * 1000);
+}
+
+refresh();
+</script>
+
+</body>
+</html>
