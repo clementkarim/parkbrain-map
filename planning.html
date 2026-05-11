@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning / Gestion Places</title>
+<style>
+  :root {
+    --libre: #22c55e;
+    --occupe: #ef4444;
+    --warning: #f59e0b;
+    --accent: #3b82f6;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --success: #22c55e;
+    --incoherence: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  /* Filtres */
+  .filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .filter-group label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .filter-group select,
+  .filter-group input[type="date"],
+  .filter-group input[type="text"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .filter-group input[type="text"] {
+    min-width: 180px;
+  }
+
+  .filter-group select:focus,
+  .filter-group input:focus {
+    border-color: var(--accent);
+  }
+
+  /* Stats */
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    flex: 1;
+    min-width: 70px;
+  }
+
+  .stat .val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat .lbl {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* Liste */
+  .resa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .resa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    transition: box-shadow 0.15s;
+  }
+
+  .resa-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  .resa-card.has-incoherence {
+    border-color: var(--incoherence);
+    border-left: 4px solid var(--incoherence);
+  }
+
+  .resa-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .resa-ref {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .resa-times {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-garee { background: #dcfce7; color: #166534; }
+  .badge-attente { background: #fef3c7; color: #92400e; }
+  .badge-incoherence { background: #fee2e2; color: #991b1b; }
+  .badge-default { background: #f1f5f9; color: var(--muted); }
+
+  /* Grille infos */
+  .resa-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .info-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .info-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .info-value.algo { color: var(--accent); }
+  .info-value.terrain { color: var(--success); }
+  .info-value.mismatch { color: var(--incoherence); }
+  .info-value.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+
+  /* Section places */
+  .places-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .place-col { display: flex; flex-direction: column; gap: 4px; }
+
+  .place-col-title {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .place-col-title.algo { color: var(--accent); }
+  .place-col-title.terrain { color: var(--success); }
+  .place-col-title.terrain.mismatch { color: var(--incoherence); }
+
+  .place-val {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* Bouton édition */
+  .btn-edit {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn-edit:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #eff6ff;
+  }
+
+  .btn-edit.incoherence {
+    border-color: var(--incoherence);
+    color: var(--incoherence);
+    background: #fef2f2;
+  }
+
+  .btn-edit.incoherence:hover { background: #fee2e2; }
+
+  /* Loading / Error / Empty */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2;
+    border: 1px solid var(--occupe);
+    border-radius: 8px;
+    padding: 16px;
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  /* Modale édition */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .modal-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .algo-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 0.78rem;
+    color: #1e40af;
+  }
+
+  .algo-info strong { font-weight: 700; }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .form-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .form-select:focus { border-color: var(--accent); }
+  .form-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .form-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+  }
+
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-save {
+    flex: 2;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .btn-save:hover { background: #16a34a; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 400px) {
+    body { padding: 12px; }
+    .resa-grid { grid-template-columns: 1fr; }
+    .places-section { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG = {
+  AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
+  BASE_ID:        "appTqMfNzSpj2yv7b",
+  TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
+  TABLE_PLACES:       "tbl06R7THmL2IvJcR",
+  REFRESH_SECONDS: 60,
+};
+</script>
+
+<div class="header">
+  <h1>Planning / Gestion Places</h1>
+  <div class="status">
+    <div class="pulse"></div>
+    <span id="lastUpdate">—</span>
+  </div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Date</label>
+    <input type="date" id="filterDate">
+  </div>
+  <div class="filter-group">
+    <label>Statut</label>
+    <select id="filterStatut">
+      <option value="">Tous les statuts</option>
+      <option value="incoherence">⚠️ Incohérences uniquement</option>
+      <option value="Garée">Garée</option>
+      <option value="En attente">En attente</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Recherche</label>
+    <input type="text" id="filterSearch" placeholder="Nom, véhicule...">
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="content">
+  <div class="loading"><div class="spinner"></div> Chargement...</div>
+</div>
+
+<!-- Modale édition place terrain -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Modifier la place terrain</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-subtitle" id="modalSubtitle">—</div>
+
+    <div class="algo-info" id="algoInfo"></div>
+
+    <div class="form-group">
+      <label class="form-label">Ligne terrain</label>
+      <select class="form-select" id="selectLigne" onchange="onLigneChange()">
+        <option value="">Sélectionner une ligne...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Profondeur (Y)</label>
+      <select class="form-select" id="selectY" disabled>
+        <option value="">Sélectionner d'abord une ligne...</option>
+      </select>
+      <div class="form-hint" id="yHint"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" id="btnSave" onclick="saveEdit()" disabled>✓ Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const today = new Date();
+const todayStr = today.toISOString().split("T")[0];
+
+let allReservations = [];
+let placesIndex = {};
+let currentRecordId = null;
+
+// Init date
+document.getElementById("filterDate").value = todayStr;
+document.getElementById("filterDate").addEventListener("change", () => loadAndRender());
+document.getElementById("filterStatut").addEventListener("change", () => render());
+document.getElementById("filterSearch").addEventListener("input", () => render());
+
+// ─── API ──────────────────────────────────
+async function fetchAll(tableId, fields) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || tableId}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+
+async function patchRecord(tableId, recordId, fields) {
+  const res = await fetch(
+    `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}/${recordId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ fields })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Erreur PATCH ${res.status} — ${err.error?.message || ""}`);
+  }
+  return res.json();
+}
+
+// ─── Chargement ───────────────────────────
+async function loadAndRender() {
+  document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div> Chargement...</div>`;
+
+  const dateStr = document.getElementById("filterDate").value || todayStr;
+  const dayStart = new Date(dateStr + "T00:00:00").getTime();
+  const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+
+  const [resaRaw, placesRaw] = await Promise.all([
+    fetchAll(CONFIG.TABLE_RESERVATIONS, [
+      "Booking_ID", "Client_Booking_Ref",
+      "Vehicule_Modele", "Vehicule_Couleur",
+      "DateHeure_Arrivee", "DateHeure_Retour",
+      "Statut_Reservation", "Incoherence_Statut",
+      "Place_Assignee_Ligne", "Place_Assignee_Y",
+      "Place_Terrain_Ligne", "Place_Terrain_Y"
+    ]),
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
+  ]);
+
+  // Index places
+  placesIndex = {};
+  placesRaw.forEach(r => {
+    const ligne = r.fields.Ligne_Terrain;
+    const y = r.fields.Y;
+    if (!ligne || y == null) return;
+    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+    placesIndex[ligne].add(y);
+  });
+  Object.keys(placesIndex).forEach(k => {
+    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+  });
+
+  // Filtrer : arrivée OU retour dans la journée sélectionnée
+  allReservations = resaRaw
+    .filter(r => {
+      const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
+      const retour  = r.fields.DateHeure_Retour  ? new Date(r.fields.DateHeure_Retour).getTime()  : null;
+      const arriveeDansJournee = arrivee && arrivee >= dayStart && arrivee <= dayEnd;
+      const retourDansJournee  = retour  && retour  >= dayStart && retour  <= dayEnd;
+      return arriveeDansJournee || retourDansJournee;
+    })
+    .map(r => ({ id: r.id, ...r.fields }))
+    .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
+
+  render();
+
+  const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+}
+
+// ─── Rendu ────────────────────────────────
+function render() {
+  const statutFilter = document.getElementById("filterStatut").value;
+  const search = document.getElementById("filterSearch").value.toLowerCase();
+
+  let filtered = allReservations.filter(r => {
+    // Filtre statut
+    if (statutFilter === "incoherence" && r.Incoherence_Statut !== "A vérifier") return false;
+    if (statutFilter && statutFilter !== "incoherence" && r.Statut_Reservation !== statutFilter) return false;
+
+    // Filtre recherche
+    if (search) {
+      const ref = (r.Client_Booking_Ref || "").toLowerCase();
+      const modele = (r.Vehicule_Modele || "").toLowerCase();
+      const couleur = (r.Vehicule_Couleur || "").toLowerCase();
+      if (!ref.includes(search) && !modele.includes(search) && !couleur.includes(search)) return false;
+    }
+
+    return true;
+  });
+
+  // Stats
+  const total = allReservations.length;
+  const incoherences = allReservations.filter(r => r.Incoherence_Statut === "A vérifier").length;
+  const garees = allReservations.filter(r => r.Statut_Reservation === "Garée").length;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="val">${total}</div><div class="lbl">Total</div></div>
+    <div class="stat"><div class="val" style="color:var(--success)">${garees}</div><div class="lbl">Garées</div></div>
+    <div class="stat"><div class="val" style="color:var(--incoherence)">${incoherences}</div><div class="lbl">Incohérences</div></div>
+  `;
+
+  if (filtered.length === 0) {
+    document.getElementById("content").innerHTML = `<div class="empty">Aucune réservation trouvée</div>`;
+    return;
+  }
+
+  const fmt = iso => iso ? new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—";
+
+  const html = filtered.map(r => {
+    const hasIncoherence = r.Incoherence_Statut === "A vérifier";
+
+    const algoLigne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
+    const algoY     = Array.isArray(r.Place_Assignee_Y)     ? r.Place_Assignee_Y[0]     : (r.Place_Assignee_Y     ?? "—");
+    const terrLigne = r.Place_Terrain_Ligne || null;
+    const terrY     = r.Place_Terrain_Y     != null ? r.Place_Terrain_Y : null;
+
+    const ligneMismatch = terrLigne && terrLigne !== algoLigne;
+    const yMismatch     = terrY != null && terrY !== algoY;
+
+    let badge = "";
+    if (hasIncoherence) badge = `<span class="badge badge-incoherence">⚠️ Incohérence</span>`;
+    else if (r.Statut_Reservation === "Garée") badge = `<span class="badge badge-garee">✅ Garée</span>`;
+    else badge = `<span class="badge badge-attente">${r.Statut_Reservation || "En attente"}</span>`;
+
+    return `
+      <div class="resa-card ${hasIncoherence ? 'has-incoherence' : ''}" id="card-${r.id}">
+        <div class="resa-top">
+          <div>
+            <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
+            <div class="resa-times">↓ ${fmt(r.DateHeure_Arrivee)} — ↑ ${fmt(r.DateHeure_Retour)}</div>
+          </div>
+          ${badge}
+        </div>
+
+        <div class="resa-grid">
+          <div class="info-item">
+            <span class="info-label">Véhicule</span>
+            <span class="info-value">${r.Vehicule_Modele || "—"}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Couleur</span>
+            <span class="info-value">${r.Vehicule_Couleur || "—"}</span>
+          </div>
+        </div>
+
+        <div class="places-section">
+          <div class="place-col">
+            <div class="place-col-title algo">Place Algo</div>
+            <div class="info-item">
+              <span class="info-label">Ligne</span>
+              <span class="info-value algo">${algoLigne}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Profondeur</span>
+              <span class="info-value algo">${algoY}</span>
+            </div>
+          </div>
+          <div class="place-col">
+            <div class="place-col-title terrain ${hasIncoherence ? 'mismatch' : ''}">Place Terrain</div>
+            <div class="info-item">
+              <span class="info-label">Ligne</span>
+              <span class="info-value ${!terrLigne ? 'empty' : ligneMismatch ? 'mismatch' : 'terrain'}">${terrLigne || "Non renseignée"}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Profondeur</span>
+              <span class="info-value ${terrY == null ? 'empty' : yMismatch ? 'mismatch' : 'terrain'}">${terrY ?? "Non renseignée"}</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-edit ${hasIncoherence ? 'incoherence' : ''}"
+          onclick="openModal('${r.id}', '${(r.Client_Booking_Ref || r.Booking_ID || '').replace(/'/g, '')}', '${algoLigne}', '${algoY}')">
+          ${hasIncoherence ? '⚠️ Corriger la place terrain' : '✏️ Modifier la place terrain'}
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("content").innerHTML = `<div class="resa-list">${html}</div>`;
+}
+
+// ─── Modale ───────────────────────────────
+function openModal(recordId, ref, algoLigne, algoY) {
+  currentRecordId = recordId;
+
+  document.getElementById("modalSubtitle").textContent = ref;
+  document.getElementById("algoInfo").innerHTML = `Place algo : <strong>${algoLigne} — profondeur ${algoY}</strong>`;
+
+  const lignes = Object.keys(placesIndex).sort();
+  const sel = document.getElementById("selectLigne");
+  sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
+  lignes.forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l;
+    opt.textContent = l;
+    sel.appendChild(opt);
+  });
+
+  const selY = document.getElementById("selectY");
+  selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+  selY.disabled = true;
+  document.getElementById("yHint").textContent = "";
+  document.getElementById("btnSave").disabled = true;
+
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function onLigneChange() {
+  const ligne = document.getElementById("selectLigne").value;
+  const selY = document.getElementById("selectY");
+  const hint = document.getElementById("yHint");
+
+  document.getElementById("btnSave").disabled = true;
+
+  if (!ligne) {
+    selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+    selY.disabled = true;
+    hint.textContent = "";
+    return;
+  }
+
+  const yVals = placesIndex[ligne] || [];
+  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
+  yVals.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `Profondeur ${y}`;
+    selY.appendChild(opt);
+  });
+
+  selY.disabled = false;
+  hint.textContent = `${yVals.length} profondeur(s) disponible(s) sur cette ligne`;
+
+  selY.addEventListener("change", () => {
+    document.getElementById("btnSave").disabled = !selY.value;
+  });
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+  currentRecordId = null;
+}
+
+async function saveEdit() {
+  const ligne = document.getElementById("selectLigne").value;
+  const y = document.getElementById("selectY").value;
+  if (!ligne || !y) return;
+
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentRecordId, {
+      "Place_Terrain_Ligne": ligne,
+      "Place_Terrain_Y": parseFloat(y)
+    });
+
+    // Mettre à jour localement
+    const idx = allReservations.findIndex(r => r.id === currentRecordId);
+    if (idx !== -1) {
+      allReservations[idx].Place_Terrain_Ligne = ligne;
+      allReservations[idx].Place_Terrain_Y = parseFloat(y);
+    }
+
+    closeModal();
+    render();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Valider";
+    alert(`Erreur : ${e.message}`);
+  }
+}
+
+// ─── Init ─────────────────────────────────
+async function refresh() {
+  try {
+    await loadAndRender();
+  } catch(e) {
+    document.getElementById("content").innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  }
+  setTimeout(refresh, CONFIG.REFRESH_SECONDS * 1000);
+}
+
+refresh();
+</script>
+
+</body>
+</html>
