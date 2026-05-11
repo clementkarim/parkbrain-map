@@ -657,7 +657,7 @@ function render() {
     const ligne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
     const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
 
-    return `
+return `
       <div class="resa-card" id="card-${r.id}">
         <div class="resa-top">
           <div>
@@ -685,14 +685,12 @@ function render() {
           </div>
         </div>
         <div class="resa-actions">
-  <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
-    📍 Confirmer la place
-  </button>
-  <button class="btn-zt" onclick="setZoneTampon('${r.id}')">
-    🅿️ Zone Tampon
-  </button>
-</div>
-          
+          <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
+            📍 Confirmer la place
+          </button>
+          <button class="btn-zt" onclick="setZoneTampon('${r.id}')">
+            🅿️ Zone Tampon
+          </button>
         </div>
       </div>
     `;
