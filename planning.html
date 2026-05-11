@@ -664,7 +664,17 @@ async function loadAndRender() {
       return arriveeDansJournee || retourDansJournee;
     })
     .map(r => ({ id: r.id, ...r.fields }))
-    .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
+    .sort((a, b) => {
+  const aTime = Math.min(
+    a.DateHeure_Arrivee ? new Date(a.DateHeure_Arrivee).getTime() : Infinity,
+    a.DateHeure_Retour  ? new Date(a.DateHeure_Retour).getTime()  : Infinity
+  );
+  const bTime = Math.min(
+    b.DateHeure_Arrivee ? new Date(b.DateHeure_Arrivee).getTime() : Infinity,
+    b.DateHeure_Retour  ? new Date(b.DateHeure_Retour).getTime()  : Infinity
+  );
+  return aTime - bTime;
+});
 
   render();
 
