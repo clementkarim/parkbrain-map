@@ -566,7 +566,7 @@ async function fetchAll(tableId, fields, formula) {
   return records;
 }
 
-async function patchRecord(tableId, recordId, fields) {
+async function patchRecord (tableId, recordId, fields) {
   const res = await fetch(
     `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}/${recordId}`,
     {
