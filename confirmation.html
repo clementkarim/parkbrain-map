@@ -114,6 +114,11 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
 
+  .resa-card.is-zt {
+  border-left: 4px solid var(--warning);
+  background: #fffbeb;
+}
+
   .resa-card.confirmed {
     border-color: var(--success);
     background: #f0fdf4;
@@ -147,6 +152,11 @@
     border-radius: 20px;
     white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  .badge-zt { 
+    background: #fef3c7; color: #92400e; 
+  
   }
 
   .badge-pending {
@@ -658,13 +668,15 @@ function render() {
     const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
 
 return `
-      <div class="resa-card" id="card-${r.id}">
+      <div class="resa-card ${r.Statut_Reservation === 'Zone Tampon' ? 'is-zt' : ''}" id="card-${r.id}">
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
             <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)}</div>
           </div>
-          <span class="badge badge-pending">À confirmer</span>
+          <span class="badge ${r.Statut_Reservation === 'Zone Tampon' ? 'badge-zt' : 'badge-pending'}">
+  ${r.Statut_Reservation === 'Zone Tampon' ? '🅿️ Zone Tampon' : 'À confirmer'}
+</span>
         </div>
         <div class="resa-details">
           <div class="detail-item">
