@@ -490,7 +490,6 @@ const CONFIG = {
   BASE_ID:        "appTqMfNzSpj2yv7b",
   TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
   TABLE_PLACES:       "tbl06R7THmL2IvJcR",
-  REFRESH_SECONDS: 60,
 };
 </script>
 
@@ -908,7 +907,6 @@ async function refresh() {
   } catch(e) {
     document.getElementById("content").innerHTML = `<div class="error">❌ ${e.message}</div>`;
   }
-  setTimeout(refresh, CONFIG.REFRESH_SECONDS * 1000);
 }
 
 refresh();
