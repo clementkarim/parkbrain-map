@@ -665,15 +665,21 @@ async function loadAndRender() {
     })
     .map(r => ({ id: r.id, ...r.fields }))
     .sort((a, b) => {
-  const aTime = Math.min(
-    a.DateHeure_Arrivee ? new Date(a.DateHeure_Arrivee).getTime() : Infinity,
-    a.DateHeure_Retour  ? new Date(a.DateHeure_Retour).getTime()  : Infinity
-  );
-  const bTime = Math.min(
-    b.DateHeure_Arrivee ? new Date(b.DateHeure_Arrivee).getTime() : Infinity,
-    b.DateHeure_Retour  ? new Date(b.DateHeure_Retour).getTime()  : Infinity
-  );
-  return aTime - bTime;
+  const dateStr = document.getElementById("filterDate").value || todayStr;
+  const dayStart = new Date(dateStr + "T00:00:00").getTime();
+  const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+
+  const getEventTime = r => {
+    const arrivee = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+    const retour  = r.DateHeure_Retour  ? new Date(r.DateHeure_Retour).getTime()  : null;
+    const arriveeAujourdhui = arrivee && arrivee >= dayStart && arrivee <= dayEnd ? arrivee : null;
+    const retourAujourdhui  = retour  && retour  >= dayStart && retour  <= dayEnd ? retour  : null;
+    // Prendre le plus tôt des événements du jour
+    if (arriveeAujourdhui && retourAujourdhui) return Math.min(arriveeAujourdhui, retourAujourdhui);
+    return arriveeAujourdhui || retourAujourdhui || Infinity;
+  };
+
+  return getEventTime(a) - getEventTime(b);
 });
 
   render();
