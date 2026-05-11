@@ -213,7 +213,22 @@
     background: var(--success);
     cursor: default;
   }
+  
+.btn-zt {
+  flex: 1;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
 
+.btn-zt:hover { background: #d97706; }
   /* Loading / Error */
   .loading {
     display: flex;
@@ -670,9 +685,14 @@ function render() {
           </div>
         </div>
         <div class="resa-actions">
-          <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
-            📍 Confirmer la place
-          </button>
+  <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
+    📍 Confirmer la place
+  </button>
+  <button class="btn-zt" onclick="setZoneTampon('${r.id}')">
+    🅿️ Zone Tampon
+  </button>
+</div>
+          
         </div>
       </div>
     `;
@@ -780,7 +800,21 @@ async function saveConfirmation() {
 }
 
 // ─── Init ─────────────────────────────────
-async function refresh() {
+async function setZoneTampon(recordId) {
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, recordId, {
+      "Statut_Reservation": "Zone Tampon"
+    });
+    // Mettre à jour localement sans retirer la carte
+    const idx = allReservations.findIndex(r => r.id === recordId);
+    if (idx !== -1) allReservations[idx].Statut_Reservation = "Zone Tampon";
+    render();
+  } catch(e) {
+    alert(`Erreur : ${e.message}`);
+  }
+}
+  
+  async function refresh() {
   try {
     await loadAll();
     render();
