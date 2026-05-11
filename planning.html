@@ -165,6 +165,14 @@
     border-color: var(--incoherence);
     border-left: 4px solid var(--incoherence);
   }
+  
+  .resa-card.is-arrivee {
+  border-left: 4px solid var(--success);
+}
+
+.resa-card.is-depart {
+  border-left: 4px solid var(--incoherence);
+}
 
   .resa-top {
     display: flex;
@@ -730,6 +738,12 @@ function render() {
   hour: "2-digit", minute: "2-digit"
 }) : "—";
   const html = filtered.map(r => {
+    const dateStr = document.getElementById("filterDate").value || todayStr;
+const dayStart = new Date(dateStr + "T00:00:00").getTime();
+const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+const arriveeTs = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+const isArrivee = arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd;
+
     const hasIncoherence = r.Incoherence_Statut === "A vérifier";
 
     const algoLigne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
@@ -746,7 +760,7 @@ function render() {
     else badge = `<span class="badge badge-attente">${r.Statut_Reservation || "En attente"}</span>`;
 
     return `
-      <div class="resa-card ${hasIncoherence ? 'has-incoherence' : ''}" id="card-${r.id}">
+      <div class="resa-card ${hasIncoherence ? 'has-incoherence' : isArrivee ? 'is-arrivee' : 'is-depart'}" id="card-${r.id}">
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
