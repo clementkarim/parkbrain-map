@@ -710,7 +710,10 @@ function render() {
   }
 
   const fmt = iso => iso ? new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—";
-
+  const fmtFull = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+  day: "2-digit", month: "2-digit",
+  hour: "2-digit", minute: "2-digit"
+}) : "—";
   const html = filtered.map(r => {
     const hasIncoherence = r.Incoherence_Statut === "A vérifier";
 
@@ -732,7 +735,11 @@ function render() {
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
-            <div class="resa-times">↓ ${fmt(r.DateHeure_Arrivee)} — ↑ ${fmt(r.DateHeure_Retour)}</div>
+            <div class="resa-times">
+  <span style="color:var(--success);font-weight:600;">↓ ${fmtFull(r.DateHeure_Arrivee)}</span>
+  &nbsp;—&nbsp;
+  <span style="color:var(--incoherence);font-weight:600;">↑ ${fmtFull(r.DateHeure_Retour)}</span>
+</div>
           </div>
           ${badge}
         </div>
