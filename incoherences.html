@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incohérences Terrain</title>
+<style>
+  :root {
+    --libre: #22c55e;
+    --occupe: #ef4444;
+    --warning: #f59e0b;
+    --accent: #3b82f6;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --success: #22c55e;
+    --incoherence: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--incoherence);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .filter-date {
+    margin-bottom: 16px;
+  }
+
+  .filter-date label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .filter-date input[type="date"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+    transition: border-color 0.15s;
+  }
+
+  .filter-date input[type="date"]:focus {
+    border-color: var(--accent);
+  }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    flex: 1;
+  }
+
+  .stat .val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat .lbl {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .resa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .resa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--incoherence);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .resa-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .resa-ref {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .resa-times {
+    font-size: 0.72rem;
+    margin-top: 2px;
+  }
+
+  .badge-incoherence {
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #fee2e2;
+    color: #991b1b;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .places-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .place-col { display: flex; flex-direction: column; gap: 6px; }
+
+  .place-col-title {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+
+  .place-col-title.algo { color: var(--accent); }
+  .place-col-title.terrain { color: var(--incoherence); }
+
+  .info-item { display: flex; flex-direction: column; gap: 2px; }
+
+  .info-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .info-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .info-value.algo { color: var(--accent); }
+  .info-value.mismatch { color: var(--incoherence); }
+  .info-value.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+
+  .vehicle-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .btn-correct {
+    width: 100%;
+    background: var(--incoherence);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .btn-correct:hover { background: #dc2626; }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2;
+    border: 1px solid var(--occupe);
+    border-radius: 8px;
+    padding: 16px;
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* Modale */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .modal-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .algo-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 0.78rem;
+    color: #1e40af;
+  }
+
+  .algo-info strong { font-weight: 700; }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .form-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .form-select:focus { border-color: var(--accent); }
+  .form-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .form-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+  }
+
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-save {
+    flex: 2;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .btn-save:hover { background: #16a34a; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 400px) {
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG = {
+  AIRTABLE_TOKEN: "VOTRE_TOKEN_ICI",
+  BASE_ID:        "VOTRE_BASE_ID_ICI",
+  TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
+  TABLE_PLACES:       "tbl06R7THmL2IvJcR",
+};
+</script>
+
+<div class="header">
+  <h1>⚠️ Incohérences Terrain</h1>
+  <div class="status">
+    <div class="pulse"></div>
+    <span id="lastUpdate">—</span>
+  </div>
+</div>
+
+<div class="filter-date">
+  <label>Date</label>
+  <input type="date" id="filterDate">
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="content">
+  <div class="loading"><div class="spinner"></div> Chargement...</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Corriger la place terrain</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-subtitle" id="modalSubtitle">—</div>
+    <div class="algo-info" id="algoInfo"></div>
+    <div class="form-group">
+      <label class="form-label">Ligne terrain</label>
+      <select class="form-select" id="selectLigne" onchange="onLigneChange()">
+        <option value="">Sélectionner une ligne...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Profondeur (Y)</label>
+      <select class="form-select" id="selectY" disabled>
+        <option value="">Sélectionner d'abord une ligne...</option>
+      </select>
+      <div class="form-hint" id="yHint"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" id="btnSave" onclick="saveCorrection()" disabled>✓ Corriger</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const today = new Date();
+const todayStr = today.toISOString().split("T")[0];
+document.getElementById("filterDate").value = todayStr;
+document.getElementById("filterDate").addEventListener("change", () => loadAndRender());
+
+let allIncoherences = [];
+let placesIndex = {};
+let currentRecordId = null;
+
+async function fetchAll(tableId, fields) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || tableId}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+
+async function patchRecord(tableId, recordId, fields) {
+  const res = await fetch(
+    `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}/${recordId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ fields })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Erreur PATCH ${res.status} — ${err.error?.message || ""}`);
+  }
+  return res.json();
+}
+
+async function loadAndRender() {
+  document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div> Chargement...</div>`;
+
+  const dateStr = document.getElementById("filterDate").value || todayStr;
+  const dayStart = new Date(dateStr + "T00:00:00").getTime();
+  const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+
+  const [resaRaw, placesRaw] = await Promise.all([
+    fetchAll(CONFIG.TABLE_RESERVATIONS, [
+      "Booking_ID", "Client_Booking_Ref",
+      "Vehicule_Modele", "Vehicule_Couleur",
+      "DateHeure_Arrivee", "DateHeure_Retour",
+      "Incoherence_Statut",
+      "Place_Assignee_Ligne", "Place_Assignee_Y",
+      "Place_Terrain_Ligne", "Place_Terrain_Y"
+    ]),
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
+  ]);
+
+  // Index places
+  placesIndex = {};
+  placesRaw.forEach(r => {
+    const ligne = r.fields.Ligne_Terrain;
+    const y = r.fields.Y;
+    if (!ligne || y == null) return;
+    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+    placesIndex[ligne].add(y);
+  });
+  Object.keys(placesIndex).forEach(k => {
+    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+  });
+
+  // Filtrer : incohérences sur la journée sélectionnée
+  allIncoherences = resaRaw
+    .filter(r => {
+      const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
+      const retour  = r.fields.DateHeure_Retour  ? new Date(r.fields.DateHeure_Retour).getTime()  : null;
+      const dansJournee = (arrivee && arrivee >= dayStart && arrivee <= dayEnd) ||
+                          (retour  && retour  >= dayStart && retour  <= dayEnd);
+      return dansJournee && r.fields.Incoherence_Statut === "A vérifier";
+    })
+    .map(r => ({ id: r.id, ...r.fields }))
+    .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
+
+  render();
+
+  const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+}
+
+function render() {
+  document.getElementById("stats").innerHTML = `
+    <div class="stat">
+      <div class="val" style="color:var(--incoherence)">${allIncoherences.length}</div>
+      <div class="lbl">À corriger</div>
+    </div>
+  `;
+
+  if (allIncoherences.length === 0) {
+    document.getElementById("content").innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✅</div>
+        Aucune incohérence détectée
+      </div>`;
+    return;
+  }
+
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  }) : "—";
+
+  const html = allIncoherences.map(r => {
+    const algoLigne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
+    const algoY     = Array.isArray(r.Place_Assignee_Y)     ? r.Place_Assignee_Y[0]     : (r.Place_Assignee_Y     ?? "—");
+    const terrLigne = r.Place_Terrain_Ligne || null;
+    const terrY     = r.Place_Terrain_Y != null ? r.Place_Terrain_Y : null;
+
+    const ligneMismatch = terrLigne && terrLigne !== algoLigne;
+    const yMismatch     = terrY != null && terrY !== algoY;
+
+    return `
+      <div class="resa-card" id="card-${r.id}">
+        <div class="resa-top">
+          <div>
+            <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
+            <div class="resa-times">
+              <span style="color:var(--success);font-weight:600;">↓ ${fmt(r.DateHeure_Arrivee)}</span>
+              &nbsp;—&nbsp;
+              <span style="color:var(--incoherence);font-weight:600;">↑ ${fmt(r.DateHeure_Retour)}</span>
+            </div>
+          </div>
+          <span class="badge-incoherence">⚠️ Incohérence</span>
+        </div>
+
+        <div class="vehicle-row">
+          <div class="info-item">
+            <span class="info-label">Véhicule</span>
+            <span class="info-value">${r.Vehicule_Modele || "—"}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Couleur</span>
+            <span class="info-value">${r.Vehicule_Couleur || "—"}</span>
+          </div>
+        </div>
+
+        <div class="places-section">
+          <div class="place-col">
+            <div class="place-col-title algo">Place Algo</div>
+            <div class="info-item">
+              <span class="info-label">Ligne</span>
+              <span class="info-value algo">${algoLigne}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Profondeur</span>
+              <span class="info-value algo">${algoY}</span>
+            </div>
+          </div>
+          <div class="place-col">
+            <div class="place-col-title terrain">Place Terrain</div>
+            <div class="info-item">
+              <span class="info-label">Ligne</span>
+              <span class="info-value ${!terrLigne ? 'empty' : ligneMismatch ? 'mismatch' : ''}">${terrLigne || "Non renseignée"}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Profondeur</span>
+              <span class="info-value ${terrY == null ? 'empty' : yMismatch ? 'mismatch' : ''}">${terrY ?? "Non renseignée"}</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-correct" onclick="openModal('${r.id}', '${(r.Client_Booking_Ref || r.Booking_ID || '').replace(/'/g, '')}', '${algoLigne}', '${algoY}')">
+          ✏️ Corriger la place terrain
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("content").innerHTML = `<div class="resa-list">${html}</div>`;
+}
+
+function openModal(recordId, ref, algoLigne, algoY) {
+  currentRecordId = recordId;
+  document.getElementById("modalSubtitle").textContent = ref;
+  document.getElementById("algoInfo").innerHTML = `Place algo : <strong>${algoLigne} — profondeur ${algoY}</strong>`;
+
+  const lignes = Object.keys(placesIndex).sort();
+  const sel = document.getElementById("selectLigne");
+  sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
+  lignes.forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l;
+    opt.textContent = l;
+    sel.appendChild(opt);
+  });
+
+  const selY = document.getElementById("selectY");
+  selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+  selY.disabled = true;
+  document.getElementById("yHint").textContent = "";
+  document.getElementById("btnSave").disabled = true;
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function onLigneChange() {
+  const ligne = document.getElementById("selectLigne").value;
+  const selY = document.getElementById("selectY");
+  const hint = document.getElementById("yHint");
+
+  document.getElementById("btnSave").disabled = true;
+
+  if (!ligne) {
+    selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+    selY.disabled = true;
+    hint.textContent = "";
+    return;
+  }
+
+  const yVals = placesIndex[ligne] || [];
+  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
+  yVals.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `Profondeur ${y}`;
+    selY.appendChild(opt);
+  });
+
+  selY.disabled = false;
+  hint.textContent = `${yVals.length} profondeur(s) disponible(s) sur cette ligne`;
+
+  selY.addEventListener("change", () => {
+    document.getElementById("btnSave").disabled = !selY.value;
+  });
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+  currentRecordId = null;
+}
+
+async function saveCorrection() {
+  const ligne = document.getElementById("selectLigne").value;
+  const y = document.getElementById("selectY").value;
+  if (!ligne || !y) return;
+
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentRecordId, {
+      "Place_Terrain_Ligne": ligne,
+      "Place_Terrain_Y": parseFloat(y)
+    });
+
+    // Retirer la carte de la liste
+    allIncoherences = allIncoherences.filter(r => r.id !== currentRecordId);
+    closeModal();
+    render();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Corriger";
+    alert(`Erreur : ${e.message}`);
+  }
+}
+
+loadAndRender();
+</script>
+
+</body>
+</html>
