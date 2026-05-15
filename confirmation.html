@@ -605,7 +605,7 @@ async function loadAll() {
       "Booking_ID", "Client_Booking_Ref",
       "Vehicule_Modele", "Vehicule_Couleur",
       "DateHeure_Arrivee", "Place_Assignee_Ligne", "Place_Assignee_Y",
-      "Statut_Reservation", "Place_Terrain_Confirmee"
+      "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement"
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
   ]);
@@ -675,7 +675,7 @@ return `
             <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)}</div>
           </div>
           <span class="badge ${r.Statut_Reservation === 'Zone Tampon' ? 'badge-zt' : 'badge-pending'}">
-  ${r.Statut_Reservation === 'Zone Tampon' ? '🅿️ Zone Tampon' : 'À confirmer'}
+  ${r.Statut_Reservation === 'Zone Tampon' ? `🅿️ Zone Tampon${r.Zone_Tampon_Emplacement ? '<br><span style="font-size:0.65rem;font-weight:400;">' + r.Zone_Tampon_Emplacement + '</span>' : ''}` : 'À confirmer'}
 </span>
         </div>
         <div class="resa-details">
