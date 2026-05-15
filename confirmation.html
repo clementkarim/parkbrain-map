@@ -700,9 +700,9 @@ return `
           <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
             📍 Confirmer la place
           </button>
-          <button class="btn-zt" onclick="setZoneTampon('${r.id}')">
-            🅿️ ZT
-          </button>
+          <button class="btn-zt" onclick="openZTModal('${r.id}')">
+  🅿️ ZT
+</button>
         </div>
       </div>
     `;
@@ -810,16 +810,37 @@ async function saveConfirmation() {
 }
 
 // ─── Init ─────────────────────────────────
-async function setZoneTampon(recordId) {
+let currentZTRecordId = null;
+
+function openZTModal(recordId) {
+  currentZTRecordId = recordId;
+  document.getElementById("ztEmplacement").value = "";
+  document.getElementById("ztModalOverlay").classList.add("open");
+}
+
+function closeZTModal() {
+  document.getElementById("ztModalOverlay").classList.remove("open");
+  currentZTRecordId = null;
+}
+
+async function saveZT() {
+  const emplacement = document.getElementById("ztEmplacement").value.trim();
+  const btn = document.getElementById("btnSaveZT");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
   try {
-    await patchRecord(CONFIG.TABLE_RESERVATIONS, recordId, {
-      "Statut_Reservation": "Zone Tampon"
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentZTRecordId, {
+      "Statut_Reservation": "Zone Tampon",
+      "Zone_Tampon_Emplacement": emplacement
     });
-    // Mettre à jour localement sans retirer la carte
-    const idx = allReservations.findIndex(r => r.id === recordId);
+    const idx = allReservations.findIndex(r => r.id === currentZTRecordId);
     if (idx !== -1) allReservations[idx].Statut_Reservation = "Zone Tampon";
+    closeZTModal();
     render();
   } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Valider";
     alert(`Erreur : ${e.message}`);
   }
 }
@@ -838,6 +859,24 @@ async function setZoneTampon(recordId) {
 
 refresh();
 </script>
-
+<div class="modal-overlay" id="ztModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Zone Tampon</div>
+      <button class="modal-close" onclick="closeZTModal()">✕</button>
+    </div>
+    <div class="modal-subtitle">Indiquez où est garée la voiture provisoirement</div>
+    <div class="form-group">
+      <label class="form-label">Emplacement provisoire</label>
+      <input type="text" id="ztEmplacement" class="form-select" 
+        placeholder="Ex: Devant la barrière, Allée centrale..." 
+        style="appearance:none; background-image:none;">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeZTModal()">Annuler</button>
+      <button class="btn-save" onclick="saveZT()" id="btnSaveZT">✓ Valider</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
