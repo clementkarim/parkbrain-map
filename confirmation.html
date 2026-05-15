@@ -490,9 +490,14 @@ const CONFIG = {
   </div>
 </div>
 
-<div class="filter-date">
-  <label>Date</label>
-  <input type="date" id="filterDate">
+<div style="display:flex; align-items:flex-end; gap:10px; margin-bottom:16px;">
+  <div class="filter-date" style="margin-bottom:0;">
+    <label>Date</label>
+    <input type="date" id="filterDate">
+  </div>
+  <button onclick="refresh()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">
+    ↻ Actualiser
+  </button>
 </div>
 
 <div class="stats" id="stats"></div>
