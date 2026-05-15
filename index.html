@@ -545,7 +545,7 @@ async function loadAll() {
   const [placesRaw, occRaw, resaRaw] = await Promise.all([
     fetchAll("Places", [
       "Place_ID", "Ligne_Terrain", "Position_Terrain",
-      "Sous_zone", "Zone_principale", "Y",
+      "Sous_zone", "Zone_principale", "Y", "X",
       "Type_Place", "Active"
     ]),
     fetchAll("Occupations", [
@@ -673,7 +673,15 @@ function render() {
     let zoneHtml = `<div class="zone-section"><div class="zone-title">${zone}</div>`;
 
     if (stackees.length > 0) {
-      const lignes = [...new Set(stackees.map(p => p.Ligne_Terrain).filter(Boolean))].sort();
+      
+      // Trier les lignes par X croissant
+const lignesMap = {};
+stackees.forEach(p => {
+  if (p.Ligne_Terrain && !lignesMap[p.Ligne_Terrain]) {
+    lignesMap[p.Ligne_Terrain] = p.X ?? 9999;
+  }
+});
+const lignes = Object.keys(lignesMap).sort((a, b) => lignesMap[a] - lignesMap[b]);
       const yVals = [...new Set(stackees.map(p => p.Y).filter(v => v != null))].sort((a,b) => a - b);
       const idx = {};
       stackees.forEach(p => { idx[`${p.Ligne_Terrain}__${p.Y}`] = p; });
