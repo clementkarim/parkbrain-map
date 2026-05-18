@@ -516,12 +516,14 @@ const CONFIG = {
   </div>
   <div class="filter-group">
     <label>Statut</label>
-    <select id="filterStatut">
-      <option value="">Tous les statuts</option>
-      <option value="incoherence">⚠️ Incohérences uniquement</option>
-      <option value="Garée">Garée</option>
-      <option value="En attente">En attente</option>
-    </select>
+<select id="filterStatut">
+  <option value="">Tous</option>
+  <option value="in">🟢 IN — Entrées</option>
+  <option value="out">🔴 OUT — Sorties</option>
+  <option value="Garée">✅ Garées</option>
+  <option value="non-garee">⏳ Non Garées</option>
+  <option value="incoherence">⚠️ Incohérences</option>
+</select>
   </div>
   <div class="filter-group">
     <label>Recherche</label>
@@ -702,9 +704,17 @@ function render() {
 
   let filtered = allReservations.filter(r => {
     // Filtre statut
-    if (statutFilter === "incoherence" && r.Incoherence_Statut !== "A vérifier") return false;
-    if (statutFilter && statutFilter !== "incoherence" && r.Statut_Reservation !== statutFilter) return false;
+const dateStr = document.getElementById("filterDate").value || todayStr;
+const dayStart = new Date(dateStr + "T00:00:00").getTime();
+const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+const arriveeTs = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+const retourTs  = r.DateHeure_Retour  ? new Date(r.DateHeure_Retour).getTime()  : null;
 
+if (statutFilter === "in" && !(arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd)) return false;
+if (statutFilter === "out" && !(retourTs && retourTs >= dayStart && retourTs <= dayEnd)) return false;
+if (statutFilter === "Garée" && r.Statut_Reservation !== "Garée") return false;
+if (statutFilter === "non-garee" && r.Statut_Reservation === "Garée") return false;
+if (statutFilter === "incoherence" && r.Incoherence_Statut !== "A vérifier") return false;
     // Filtre recherche
     if (search) {
       const ref = (r.Client_Booking_Ref || "").toLowerCase();
