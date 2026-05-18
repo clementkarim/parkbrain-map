@@ -712,8 +712,14 @@ const retourTs  = r.DateHeure_Retour  ? new Date(r.DateHeure_Retour).getTime()  
 
 if (statutFilter === "in" && !(arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd)) return false;
 if (statutFilter === "out" && !(retourTs && retourTs >= dayStart && retourTs <= dayEnd)) return false;
-if (statutFilter === "Garée" && r.Statut_Reservation !== "Garée") return false;
-if (statutFilter === "non-garee" && r.Statut_Reservation === "Garée") return false;
+if (statutFilter === "Garée") {
+  if (r.Statut_Reservation !== "Garée") return false;
+  if (!(arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd)) return false;
+}
+if (statutFilter === "non-garee") {
+  if (r.Statut_Reservation === "Garée") return false;
+  if (!(arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd)) return false;
+}
 if (statutFilter === "incoherence" && r.Incoherence_Statut !== "A vérifier") return false;
     // Filtre recherche
     if (search) {
