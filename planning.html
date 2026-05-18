@@ -727,15 +727,32 @@ if (statutFilter === "incoherence" && r.Incoherence_Statut !== "A vérifier") re
   });
 
   // Stats
-  const total = allReservations.length;
-  const incoherences = allReservations.filter(r => r.Incoherence_Statut === "A vérifier").length;
-  const garees = allReservations.filter(r => r.Statut_Reservation === "Garée").length;
+const dateStr = document.getElementById("filterDate").value || todayStr;
+const dayStart = new Date(dateStr + "T00:00:00").getTime();
+const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
 
-  document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="val">${total}</div><div class="lbl">Total</div></div>
-    <div class="stat"><div class="val" style="color:var(--success)">${garees}</div><div class="lbl">Garées</div></div>
-    <div class="stat"><div class="val" style="color:var(--incoherence)">${incoherences}</div><div class="lbl">Incohérences</div></div>
-  `;
+const ins  = allReservations.filter(r => {
+  const ts = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+  return ts && ts >= dayStart && ts <= dayEnd;
+});
+const outs = allReservations.filter(r => {
+  const ts = r.DateHeure_Retour ? new Date(r.DateHeure_Retour).getTime() : null;
+  return ts && ts >= dayStart && ts <= dayEnd;
+});
+
+const total        = ins.length + outs.length;
+const garees       = ins.filter(r => r.Statut_Reservation === "Garée").length;
+const nonGarees    = ins.filter(r => r.Statut_Reservation !== "Garée").length;
+const incoherences = allReservations.filter(r => r.Incoherence_Statut === "A vérifier").length;
+
+document.getElementById("stats").innerHTML = `
+  <div class="stat"><div class="val">${total}</div><div class="lbl">Total</div></div>
+  <div class="stat"><div class="val" style="color:var(--success)">${ins.length}</div><div class="lbl">IN</div></div>
+  <div class="stat"><div class="val" style="color:var(--incoherence)">${outs.length}</div><div class="lbl">OUT</div></div>
+  <div class="stat"><div class="val" style="color:var(--success)">${garees}</div><div class="lbl">Garées</div></div>
+  <div class="stat"><div class="val" style="color:var(--warning)">${nonGarees}</div><div class="lbl">Non Garées</div></div>
+  <div class="stat"><div class="val" style="color:var(--incoherence)">${incoherences}</div><div class="lbl">Incohérences</div></div>
+`;
 
   if (filtered.length === 0) {
     document.getElementById("content").innerHTML = `<div class="empty">Aucune réservation trouvée</div>`;
