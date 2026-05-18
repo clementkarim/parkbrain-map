@@ -576,6 +576,7 @@ const todayStr = today.toISOString().split("T")[0];
 
 let allReservations = [];
 let placesIndex = {};
+let placesIndexX = {};
 let currentRecordId = null;
 
 // Init date
@@ -647,21 +648,24 @@ async function loadAndRender() {
       "Place_Assignee_Ligne", "Place_Assignee_Y",
       "Place_Terrain_Ligne", "Place_Terrain_Y"
     ]),
-    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y","X"])
   ]);
 
   // Index places
-  placesIndex = {};
-  placesRaw.forEach(r => {
-    const ligne = r.fields.Ligne_Terrain;
-    const y = r.fields.Y;
-    if (!ligne || y == null) return;
-    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
-    placesIndex[ligne].add(y);
-  });
-  Object.keys(placesIndex).forEach(k => {
-    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
-  });
+placesIndex = {};
+placesIndexX = {};
+placesRaw.forEach(r => {
+  const ligne = r.fields.Ligne_Terrain;
+  const y = r.fields.Y;
+  const x = r.fields.X;
+  if (!ligne || y == null) return;
+  if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+  placesIndex[ligne].add(y);
+  if (x != null && placesIndexX[ligne] == null) placesIndexX[ligne] = x;
+});
+Object.keys(placesIndex).forEach(k => {
+  placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+});
 
   // Filtrer : arrivée OU retour dans la journée sélectionnée
   allReservations = resaRaw
@@ -860,7 +864,12 @@ function openModal(recordId, ref, algoLigne, algoY) {
   document.getElementById("modalSubtitle").textContent = ref;
   document.getElementById("algoInfo").innerHTML = `Place algo : <strong>${algoLigne} — profondeur ${algoY}</strong>`;
 
-  const lignes = Object.keys(placesIndex).sort();
+  const lignes = Object.keys(placesIndex).sort((a, b) => {
+    const xA = placesIndexX[a] ?? 9999;
+    const xB = placesIndexX[b] ?? 9999;
+    return xA - xB;
+  });
+  
   const sel = document.getElementById("selectLigne");
   sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
   lignes.forEach(l => {
