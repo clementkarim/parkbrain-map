@@ -549,7 +549,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 let allReservations = [];
-let placesIndex = {}; // Ligne_Terrain -> [Y values]
+let placesIndex = {};
+let placesIndexX = {};
 let currentResaRecordId = null;
 let currentResaRef = null;
 
@@ -612,23 +613,24 @@ async function loadAll() {
       "DateHeure_Arrivee", "Place_Assignee_Ligne", "Place_Assignee_Y",
       "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement"
     ]),
-    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y"])
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y","X"])
   ]);
 
   // Construire index Ligne_Terrain -> valeurs Y uniques triées
-  placesIndex = {};
-  placesRaw.forEach(r => {
-    const ligne = r.fields.Ligne_Terrain;
-    const y = r.fields.Y;
-    if (!ligne || y == null) return;
-    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
-    placesIndex[ligne].add(y);
-  });
-  // Convertir Sets en arrays triés
-  Object.keys(placesIndex).forEach(k => {
-    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
-  });
-
+placesIndex = {};
+placesIndexX = {};
+placesRaw.forEach(r => {
+  const ligne = r.fields.Ligne_Terrain;
+  const y = r.fields.Y;
+  const x = r.fields.X;
+  if (!ligne || y == null) return;
+  if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+  placesIndex[ligne].add(y);
+  if (x != null && placesIndexX[ligne] == null) placesIndexX[ligne] = x;
+});
+Object.keys(placesIndex).forEach(k => {
+  placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+});
   // Filtrer réservations : arrivée à la date sélectionnée + pas encore Garée
   const selectedDate = document.getElementById("filterDate")?.value || todayStr;
   const dayStartTs = new Date(selectedDate + "T00:00:00").getTime();
@@ -725,7 +727,11 @@ function openModal(recordId, ref, algoLigne, algoY) {
   document.getElementById("algoInfo").innerHTML = `Place assignée moteur : <strong>${algoLigne} — profondeur ${algoY}</strong>`;
 
   // Peupler liste Ligne_Terrain
-  const lignes = Object.keys(placesIndex).sort();
+  const lignes = Object.keys(placesIndex).sort((a, b) => {
+  const xA = placesIndexX[a] ?? 9999;
+  const xB = placesIndexX[b] ?? 9999;
+  return xA - xB;
+});
   const sel = document.getElementById("selectLigne");
   sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
   lignes.forEach(l => {
