@@ -440,11 +440,6 @@ const CONFIG = {
   </div>
 </div>
 
-<div class="filter-date">
-  <label>Date</label>
-  <input type="date" id="filterDate">
-</div>
-
 <div class="stats" id="stats"></div>
 
 <div id="content">
@@ -571,14 +566,8 @@ Object.keys(placesIndex).forEach(k => {
 });
 
   // Filtrer : incohérences sur la journée sélectionnée
-  allIncoherences = resaRaw
-    .filter(r => {
-      const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
-      const retour  = r.fields.DateHeure_Retour  ? new Date(r.fields.DateHeure_Retour).getTime()  : null;
-      const dansJournee = (arrivee && arrivee >= dayStart && arrivee <= dayEnd) ||
-                          (retour  && retour  >= dayStart && retour  <= dayEnd);
-      return dansJournee && r.fields.Incoherence_Statut === "A vérifier";
-    })
+allIncoherences = resaRaw
+  .filter(r => r.fields.Incoherence_Statut === "A vérifier")
     .map(r => ({ id: r.id, ...r.fields }))
     .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
 
