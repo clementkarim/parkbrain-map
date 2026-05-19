@@ -533,10 +533,6 @@ async function patchRecord(tableId, recordId, fields) {
 async function loadAndRender() {
   document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div> Chargement...</div>`;
 
-  const dateStr = document.getElementById("filterDate").value || todayStr;
-  const dayStart = new Date(dateStr + "T00:00:00").getTime();
-  const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
-
   const [resaRaw, placesRaw] = await Promise.all([
 fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, [
   "Booking_ID", "Client_Booking_Ref",
