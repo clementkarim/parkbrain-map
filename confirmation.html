@@ -798,12 +798,13 @@ async function saveConfirmation() {
   btn.textContent = "Enregistrement...";
 
   try {
-    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentResaRecordId, {
-      "Place_Terrain_Ligne": ligne,
-      "Place_Terrain_Y": parseFloat(y),
-      "Place_Terrain_Confirmee": true,
-      "Statut_Reservation": "Garée"
-    });
+await patchRecord(CONFIG.TABLE_RESERVATIONS, currentResaRecordId, {
+  "Place_Terrain_Ligne": ligne,
+  "Place_Terrain_Y": parseFloat(y),
+  "Place_Terrain_Confirmee": true,
+  "Statut_Reservation": "Garée",
+  "DateHeure_Garage_Declaree": new Date().toISOString()
+});
 
     // Retirer la carte de la liste
     allReservations = allReservations.filter(r => r.id !== currentResaRecordId);
