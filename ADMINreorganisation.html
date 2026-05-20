@@ -510,7 +510,7 @@ async function loadOccupations() {
   const recs = await atFetch(
     T_OCC,
     `IS_AFTER({Date_Fin}, '${now}')`,
-    ['R\u00e9servations', 'Place', 'Place_ID', 'X', 'Y', 'Date_Debut', 'Date_Fin', 'Statut']
+    ['R\u00e9servations', 'Place', 'Place_ID', 'X', 'Y', 'Date_Debut', 'Date_Fin', 'Statut_Occupation']
   );
 
   occupationsRaw = recs.map(r => ({
@@ -522,7 +522,7 @@ async function loadOccupations() {
     y:               r.fields.Y ?? null,
     debut:           r.fields.Date_Debut || '',
     fin:             r.fields.Date_Fin   || '',
-    statut:          r.fields.Statut || '',
+    statut:          r.fields.Statut_Occupation || '',
   }));
 
   // Build indexes
