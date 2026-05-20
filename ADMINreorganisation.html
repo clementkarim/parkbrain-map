@@ -473,7 +473,7 @@ async function loadReservations() {
       'Statut_Reservation', 'Scenario_Assignation',
       'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
       'DateHeure_Arrivee', 'DateHeure_Retour',
-      'Incoh\u00e9rence_Statut', 'Voiture_A_Deplacer',
+      'Incoherence_Statut', 'Voiture_A_Deplacer',
       'Occupations 2', 'Parking'
     ],
     [{ field: 'DateHeure_Arrivee', direction: 'asc' }]
@@ -497,7 +497,7 @@ async function loadReservations() {
       y:           y !== null ? Number(y) : null,
       arrivee:     f.DateHeure_Arrivee || '',
       retour:      f.DateHeure_Retour  || '',
-      incoherence: f['Incoh\u00e9rence_Statut'] || '',
+      incoherence: f['Incoherence_Statut'] || '',
       a_deplacer:  f.Voiture_A_Deplacer || false,
       occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
