@@ -333,6 +333,9 @@
       <span class="prob-title">Problèmes à traiter</span>
       <span class="prob-count zero" id="prob-count">0</span>
     </div>
+<div class="prob-header" style="padding-top:0">
+      <input type="date" id="date-picker" style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;outline:none;">
+    </div>
     <div id="problems-list"></div>
   </div>
 
@@ -368,7 +371,7 @@ const T_PLACES = 'tbl06R7THmL2IvJcR';
 const T_OCC    = 'tbl6IxnnUrKQpbj2e';
 
 // ─── STATE ─────────────────────────────────────────────────────────────────────
-let placesRaw       = [];
+let selectedDate = new Date().toISOString().split('T')[0];
 let reservationsRaw = [];
 let occupationsRaw  = [];
 let placesIndex     = {};   // { ligne: [y, ...] }
@@ -467,7 +470,7 @@ async function loadReservations() {
   const yesterday = new Date(Date.now() - 86400000).toISOString();
   const recs = await atFetch(
     T_RES,
-    `NOT({Statut_Reservation} = 'Annulée')`,
+    `OR(IS_SAME({DateHeure_Arrivee}, '${selectedDate}', 'day'), IS_SAME({DateHeure_Retour}, '${selectedDate}', 'day'))`,
     [
       'Booking_ID', 'Client_Booking_Ref',
       'Statut_Reservation', 'Scenario_Assignation',
@@ -500,6 +503,7 @@ async function loadReservations() {
       incoherence: f['Incoherence_Statut'] || '',
       a_deplacer:  f.Voiture_A_Deplacer || false,
       occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
+      type_jour:   (f.DateHeure_Arrivee?.startsWith(selectedDate) && f.DateHeure_Retour?.startsWith(selectedDate)) ? 'arrivee+retour' : f.DateHeure_Arrivee?.startsWith(selectedDate) ? 'arrivee' : 'retour',
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
     };
   });
@@ -661,6 +665,7 @@ function renderProblems() {
         </div>
         <div class="pc-meta" style="margin-top:3px">
           <span>${p.detail}</span>
+          <span>${p.res.type_jour === 'arrivee' ? '↓ Arrivée' : p.res.type_jour === 'retour' ? '↑ Retour' : '↓↑ Arrivée + Retour'}</span>
         </div>
       </div>`;
   }).join('');
@@ -1198,6 +1203,12 @@ async function reload() {
       </p>`;
   }
 }
+
+document.getElementById('date-picker').value = selectedDate;
+document.getElementById('date-picker').addEventListener('change', e => {
+  selectedDate = e.target.value;
+  reload();
+});
 
 reload();
 </script>
