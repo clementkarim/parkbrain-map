@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Véhicules à Déplacer</title>
+<style>
+  :root {
+    --libre: #22c55e;
+    --occupe: #ef4444;
+    --warning: #f59e0b;
+    --accent: #3b82f6;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --success: #22c55e;
+    --priority-high: #ef4444;
+    --priority-mid: #f59e0b;
+    --priority-low: #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .btn-refresh {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .btn-refresh:hover { background: #2563eb; }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    flex: 1;
+    min-width: 70px;
+  }
+
+  .stat .val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat .lbl {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .resa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .resa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 4px solid var(--border);
+  }
+
+  .resa-card.priority-high { border-left-color: var(--priority-high); }
+  .resa-card.priority-mid  { border-left-color: var(--priority-mid); }
+  .resa-card.priority-low  { border-left-color: var(--priority-low); }
+
+  .resa-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .resa-ref {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .resa-retour {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .priority-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .priority-badge.high { background: #fee2e2; color: #991b1b; }
+  .priority-badge.mid  { background: #fef3c7; color: #92400e; }
+  .priority-badge.low  { background: #dcfce7; color: #166534; }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .info-item { display: flex; flex-direction: column; gap: 2px; }
+
+  .info-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .info-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* Section déplacement */
+  .deplacement-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.82rem;
+  }
+
+  .place-box {
+    flex: 1;
+    text-align: center;
+  }
+
+  .place-box-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .place-box-value {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .place-box-value.old { color: var(--occupe); }
+  .place-box-value.new { color: var(--success); }
+
+  .arrow {
+    font-size: 1.2rem;
+    color: var(--warning);
+    flex-shrink: 0;
+  }
+
+  .btn-done {
+    width: 100%;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .btn-done:hover { background: #16a34a; }
+  .btn-done:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2;
+    border: 1px solid var(--occupe);
+    border-radius: 8px;
+    padding: 16px;
+    color: #991b1b;
+    font-size: 0.82rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  @media (max-width: 400px) {
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG = {
+  AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
+  BASE_ID:        "appTqMfNzSpj2yv7b",
+  TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
+  Y_MAX: 8,           // Profondeur max du parc
+  POIDS_TEMPS: 0.6,   // Pondération urgence temporelle
+  POIDS_Y: 0.4,       // Pondération profondeur
+};
+</script>
+
+<div class="header">
+  <h1>🚗 Véhicules à Déplacer</h1>
+  <div class="status">
+    <div class="pulse"></div>
+    <span id="lastUpdate">—</span>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--priority-high)"></div>
+      Priorité haute
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--priority-mid)"></div>
+      Priorité moyenne
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--priority-low)"></div>
+      Priorité basse
+    </div>
+  </div>
+  <button class="btn-refresh" onclick="loadAndRender()">↻ Actualiser</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="content">
+  <div class="loading"><div class="spinner"></div> Chargement...</div>
+</div>
+
+<script>
+let allDeplacements = [];
+
+async function fetchAllFiltered(tableId, fields, formula) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (formula) params.set("filterByFormula", formula);
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || tableId}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+
+async function patchRecord(tableId, recordId, fields) {
+  const res = await fetch(
+    `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}/${recordId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ fields })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Erreur PATCH ${res.status} — ${err.error?.message || ""}`);
+  }
+  return res.json();
+}
+
+// ─── Calcul score priorité ────────────────
+function calcScore(r) {
+  const now = new Date().getTime();
+  const retour = r.DateHeure_Retour ? new Date(r.DateHeure_Retour).getTime() : null;
+  const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y ?? CONFIG.Y_MAX);
+
+  // Score temporel : plus le retour est proche, plus le score est élevé
+  let scoreTemps = 0;
+  if (retour && retour > now) {
+    const joursRestants = (retour - now) / (1000 * 60 * 60 * 24);
+    scoreTemps = Math.min(1, 1 / joursRestants);
+  } else {
+    scoreTemps = 1; // Retour dépassé = urgence max
+  }
+
+  // Score Y : plus le Y est faible, plus le score est élevé (Y=1 bloque tout)
+  const scoreY = (CONFIG.Y_MAX - y) / CONFIG.Y_MAX;
+
+  return scoreTemps * CONFIG.POIDS_TEMPS + scoreY * CONFIG.POIDS_Y;
+}
+
+function getPriorityClass(score) {
+  if (score >= 0.6) return "high";
+  if (score >= 0.3) return "mid";
+  return "low";
+}
+
+function getPriorityLabel(score) {
+  if (score >= 0.6) return "🔴 Priorité haute";
+  if (score >= 0.3) return "🟡 Priorité moyenne";
+  return "🟢 Priorité basse";
+}
+
+// ─── Chargement ───────────────────────────
+async function loadAndRender() {
+  document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div> Chargement...</div>`;
+
+  const resaRaw = await fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, [
+    "Booking_ID", "Client_Booking_Ref",
+    "Vehicule_Modele", "Vehicule_Couleur",
+    "DateHeure_Retour", "Statut_Reservation",
+    "Place_Assignee_Ligne", "Place_Assignee_Y",
+    "Place_Terrain_Ligne", "Place_Terrain_Y",
+    "Voiture_A_Deplacer"
+  ], `{Voiture_A_Deplacer} = TRUE()`);
+
+  allDeplacements = resaRaw
+    .map(r => ({ id: r.id, ...r.fields }))
+    .map(r => ({ ...r, _score: calcScore(r) }))
+    .sort((a, b) => b._score - a._score); // Score décroissant = priorité haute en premier
+
+  render();
+
+  const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  document.getElementById("lastUpdate").textContent = `Mis à jour ${now}`;
+}
+
+// ─── Rendu ────────────────────────────────
+function render() {
+  const total = allDeplacements.length;
+  const hauts = allDeplacements.filter(r => r._score >= 0.6).length;
+  const moyens = allDeplacements.filter(r => r._score >= 0.3 && r._score < 0.6).length;
+  const bas = allDeplacements.filter(r => r._score < 0.3).length;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="val">${total}</div><div class="lbl">Total</div></div>
+    <div class="stat"><div class="val" style="color:var(--priority-high)">${hauts}</div><div class="lbl">Priorité haute</div></div>
+    <div class="stat"><div class="val" style="color:var(--priority-mid)">${moyens}</div><div class="lbl">Priorité moy.</div></div>
+    <div class="stat"><div class="val" style="color:var(--priority-low)">${bas}</div><div class="lbl">Priorité basse</div></div>
+  `;
+
+  if (total === 0) {
+    document.getElementById("content").innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✅</div>
+        Aucun véhicule à déplacer
+      </div>`;
+    return;
+  }
+
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  }) : "—";
+
+  const joursRestants = retour => {
+    if (!retour) return "—";
+    const diff = (new Date(retour) - new Date()) / (1000 * 60 * 60 * 24);
+    if (diff < 0) return "Dépassé";
+    if (diff < 1) return "Aujourd'hui";
+    return `J+${Math.ceil(diff)}`;
+  };
+
+  const html = allDeplacements.map(r => {
+    const priorityClass = getPriorityClass(r._score);
+    const priorityLabel = getPriorityLabel(r._score);
+
+    const algoLigne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
+    const algoY     = Array.isArray(r.Place_Assignee_Y)     ? r.Place_Assignee_Y[0]     : (r.Place_Assignee_Y ?? "—");
+    const terrLigne = r.Place_Terrain_Ligne || "—";
+    const terrY     = r.Place_Terrain_Y != null ? r.Place_Terrain_Y : "—";
+
+    const estGaree = r.Statut_Reservation === "Garée";
+
+    return `
+      <div class="resa-card priority-${priorityClass}" id="card-${r.id}">
+        <div class="resa-top">
+          <div>
+            <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
+            <div class="resa-retour">Retour : ${fmt(r.DateHeure_Retour)} — ${joursRestants(r.DateHeure_Retour)}</div>
+          </div>
+          <span class="priority-badge ${priorityClass}">${priorityLabel}</span>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Véhicule</span>
+            <span class="info-value">${r.Vehicule_Modele || "—"}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Couleur</span>
+            <span class="info-value">${r.Vehicule_Couleur || "—"}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Statut</span>
+            <span class="info-value" style="color:${estGaree ? 'var(--success)' : 'var(--warning)'}">
+              ${estGaree ? '✅ Garée' : '⏳ Non garée'}
+            </span>
+          </div>
+        </div>
+
+        <div class="deplacement-section">
+          <div class="place-box">
+            <div class="place-box-label">Place actuelle terrain</div>
+            <div class="place-box-value old">${terrLigne} — Y${terrY}</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="place-box">
+            <div class="place-box-label">Nouvelle place algo</div>
+            <div class="place-box-value new">${algoLigne} — Y${algoY}</div>
+          </div>
+        </div>
+
+        <button class="btn-done" onclick="marquerDeplace('${r.id}')">
+          ✓ Déplacement effectué
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("content").innerHTML = `<div class="resa-list">${html}</div>`;
+}
+
+// ─── Marquer déplacé ──────────────────────
+async function marquerDeplace(recordId) {
+  const btn = document.querySelector(`#card-${recordId} .btn-done`);
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, recordId, {
+      "Voiture_A_Deplacer": false,
+      "Place_Terrain_Confirmee": false,
+      "Place_Terrain_Ligne": null,
+      "Place_Terrain_Y": null,
+      "Statut_Reservation": "En attente"
+    });
+
+    allDeplacements = allDeplacements.filter(r => r.id !== recordId);
+    render();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Déplacement effectué";
+    alert(`Erreur : ${e.message}`);
+  }
+}
+
+loadAndRender();
+</script>
+
+</body>
+</html>
