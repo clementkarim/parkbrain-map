@@ -467,7 +467,7 @@ async function loadReservations() {
   const yesterday = new Date(Date.now() - 86400000).toISOString();
   const recs = await atFetch(
     T_RES,
-    `IS_AFTER({DateHeure_Retour}, '${yesterday}')`,
+    `NOT({Statut_Reservation} = 'Annulée')`,
     [
       'Booking_ID', 'Client_Booking_Ref',
       'Statut_Reservation', 'Scenario_Assignation',
