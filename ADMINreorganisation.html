@@ -503,8 +503,9 @@ async function loadReservations() {
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
     };
   });
+  console.log(reservationsRaw.map(r => ({ id: r.id, statut: r.statut })));
 }
-console.log(reservationsRaw.map(r => ({ id: r.id, statut: r.statut })));
+
 async function loadOccupations() {
   const now = new Date().toISOString();
   const recs = await atFetch(
