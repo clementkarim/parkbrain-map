@@ -504,7 +504,7 @@ async function loadReservations() {
     };
   });
 }
-
+console.log(reservationsRaw.map(r => ({ id: r.id, statut: r.statut })));
 async function loadOccupations() {
   const now = new Date().toISOString();
   const recs = await atFetch(
