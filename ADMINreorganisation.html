@@ -145,12 +145,11 @@
       margin-bottom: 10px; padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
     }
-.map-lines { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-.map-line { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.map-lines { display: flex; flex-direction: row; gap: 14px; align-items: flex-start; overflow-x: auto; }
+.map-line { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 34px; }
 .line-label {
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  color: var(--muted); text-align: center; padding-bottom: 4px;
-  border-bottom: 1px solid var(--border); width: 100%;
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: var(--muted); text-align: center; margin-bottom: 4px; white-space: nowrap;
 }
 .line-places { display: flex; flex-direction: column; gap: 5px; }
     .place-circle {
@@ -700,12 +699,13 @@ function renderMap() {
 
   let html = '';
   Object.keys(zoneMap).sort().forEach(zone => {
-    html += `<div class="map-zone"><div class="zone-label">${zone}</div><div class="map-lines">`;
+    const maxY = Math.max(...Object.values(zoneMap[zone]).flat().map(p => p.y || 0));
+    html += `<div class="map-zone"><div class="zone-label">${zone}</div><div style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto"><div style="display:flex;flex-direction:column;gap:5px;padding-top:30px">${Array.from({length:maxY},(_,i)=>`<div style="height:34px;display:flex;align-items:center;font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:600">Y${i+1}</div>`).join('')}</div><div class="map-lines">`;
     Object.keys(zoneMap[zone])
       .sort((a, b) => (placesIndexX[a] || 0) - (placesIndexX[b] || 0))
       .forEach(ligne => {
         html += `<div class="map-line"><div class="line-label">${ligne}</div><div class="line-places">`;
-        zoneMap[zone][ligne].forEach(p => {
+        zoneMap[zone][ligne].sort((a, b) => a.y - b.y).forEach(p => {
           const res      = resByPlaceId[p.id];
           const isGaree  = res && res.statut === 'Gar\u00e9e';
           const isProblem = problemPlaceIds.has(p.id);
@@ -728,7 +728,7 @@ function renderMap() {
         });
         html += `</div></div>`;
       });
-    html += `</div></div>`;
+  html += `</div></div></div>`;
   });
 
   grid.innerHTML = html;
