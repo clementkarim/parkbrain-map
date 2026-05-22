@@ -578,11 +578,19 @@ async function loadOccupations() {
     occByPlaceId[o.place_record_id].push(o);
   });
 
-resByPlaceId = {};
+// Index places par place_id texte
+  const placeByTextId = {};
+  placesRaw.forEach(p => { if (p.place_id) placeByTextId[p.place_id] = p; });
+
+  resByPlaceId = {};
   occupationsRaw.forEach(o => {
-    if (!o.place_record_id || !o.res_ids.length) return;
+    if (!o.res_ids.length) return;
+    const pid = Array.isArray(o.place_id) ? o.place_id[0] : o.place_id;
+    if (!pid) return;
+    const place = placeByTextId[pid];
+    if (!place) return;
     const res = resByRecordId[o.res_ids[0]];
-    if (res) resByPlaceId[o.place_record_id] = res;
+    if (res) resByPlaceId[place.id] = res;
   });
   console.log('resByRecordId size:', Object.keys(resByRecordId).length);
   console.log('occ sample res_ids:', occupationsRaw[0]?.res_ids);
