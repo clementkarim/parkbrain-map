@@ -852,16 +852,30 @@ function onPlaceClick(placeId) {
   } else {
     selectedPlaceId = placeId;
     selectedResId   = res ? res.id : null;
-    openPanel(res || null, place);
+    const statut = getStatutAtDate(place.place_id, selectedDate);
+    const resEntrant = statut === 'transition' ? getResaEntranteForPlace(place.place_id) : null;
+    openPanel(res || null, place, resEntrant);
   }
   renderMap(); renderProblems();
 }
+function getResaEntranteForPlace(placeId) {
+  const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+  const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
+  return Object.values(resByRecordId).find(r => {
+    if (!r.place_code) return false;
+    const code = Array.isArray(r.place_code) ? r.place_code[0] : r.place_code;
+    if (code !== placeId) return false;
+    const arrivee = r.arrivee ? new Date(r.arrivee).getTime() : null;
+    return arrivee && arrivee >= dayStart && arrivee <= dayEnd;
+  }) || null;
+}
 
+  
 // ─── ACTION PANEL ──────────────────────────────────────────────────────────────
-function openPanel(res, place) {
+function openPanel(res, place, resEntrant = null) {
   const panel = document.getElementById('action-panel');
   panel.classList.add('open');
-  if (res) renderPanelOccupied(panel, res, place);
+  if (res) renderPanelOccupied(panel, res, place, resEntrant);
   else if (place) renderPanelFree(panel, place);
 }
 
@@ -871,10 +885,16 @@ function closePanel() {
   panel.innerHTML = '';
 }
 
-function renderPanelOccupied(panel, res, place) {
-  const isGaree  = res.statut === 'Gar\u00e9e';
+function renderPanelOccupied(panel, res, place, resEntrant = null) {
+const isGaree  = res.statut === 'Gar\u00e9e';
   const isProblem = res.statut === 'Place Non Trouv\u00e9e' || res.incoherence === 'A v\u00e9rifier';
   const dotClass = isProblem ? 'problem' : isGaree ? 'garee' : 'upcoming';
+  const statut = getStatutAtDate(place ? place.place_id : '', selectedDate);
+  const statutLabel = statut === 'transition' ? '↑↓ Départ + Arrivée'
+    : statut === 'depart'   ? '↑ Départ'
+    : statut === 'arrivee'  ? '↓ Arrivée'
+    : statut === 'occupe'   ? '● Occupée'
+    : '';
   const placeStr = place ? `${place.ligne} / Y${place.y}` : '—';
 
   const sortedLignes = Object.keys(placesIndex)
@@ -882,8 +902,9 @@ function renderPanelOccupied(panel, res, place) {
 
   panel.innerHTML = `<div class="panel-inner">
     <div class="panel-header">
-      <div class="panel-title">
+<div class="panel-title">
         <span class="status-dot ${dotClass}"></span>${res.booking_id}
+        ${statutLabel ? `<span style="font-size:9px;color:var(--muted);font-weight:400">${statutLabel}</span>` : ''}
       </div>
       <button class="close-btn" onclick="closePanel()">✕</button>
     </div>
@@ -906,7 +927,16 @@ function renderPanelOccupied(panel, res, place) {
         </div>` : ''}
       </div>
     </div>
-
+${resEntrant ? `
+    <div class="panel-section">
+      <div class="section-title" style="color:var(--blue)">↓ Arrivée prévue</div>
+      <div class="info-grid">
+        <div class="info-item"><span>Référence</span><strong>${resEntrant.booking_id}</strong></div>
+        <div class="info-item"><span>Client</span><strong>${resEntrant.client}</strong></div>
+        <div class="info-item"><span>Arrivée</span><strong>${fmtDate(resEntrant.arrivee)}</strong></div>
+        <div class="info-item"><span>Retour</span><strong>${fmtDate(resEntrant.retour)}</strong></div>
+      </div>
+    </div>` : ''}
     <!-- Réassignation -->
     <div class="panel-section">
       <div class="section-title">R\u00e9assigner</div>
