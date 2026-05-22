@@ -619,7 +619,14 @@ function getProblems() {
   const problems = [];
   const seen = new Set();
 
-  Object.values(resByRecordId).forEach(res => {
+const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+  const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
+  const resasActives = Object.values(resByRecordId).filter(r =>
+    r.arrivee && r.retour &&
+    new Date(r.arrivee).getTime() <= dayEnd &&
+    new Date(r.retour).getTime() >= dayStart
+  );
+  resasActives.forEach(res => {
     if (seen.has(res.id)) return;
 
     // 1. Place Non Trouvée
@@ -638,7 +645,7 @@ function getProblems() {
 
     // 3. Stacking conflicts (computed)
     if (res.ligne && res.y !== null) {
-      const conflicts = detectStackingConflicts(res, Object.values(resByRecordId));
+      const conflicts = detectStackingConflicts(res, resasActives);
       if (conflicts.length > 0) {
         const blockedIds = [...new Set(conflicts.map(c => c.blocked_booking))].join(', ');
         problems.push({ type: 'stacking', res, label: 'Empilement', color: 'orange',
