@@ -700,7 +700,7 @@ function renderMap() {
   let html = '';
   Object.keys(zoneMap).sort().forEach(zone => {
     const maxY = Math.max(...Object.values(zoneMap[zone]).flat().map(p => p.y || 0));
-    html += `<div class="map-zone"><div class="zone-label">${zone}</div><div style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto"><div style="display:flex;flex-direction:column;gap:5px;padding-top:30px">${Array.from({length:maxY},(_,i)=>`<div style="height:34px;display:flex;align-items:center;font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:600">Y${i+1}</div>`).join('')}</div><div class="map-lines">`;
+    html += `<div class="map-zone"><div class="zone-label">${zone}</div><div style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto"><div style="display:flex;flex-direction:column;gap:5px;padding-top:30px">${Array.from({length:maxY},(_,i)=>`<div style="height:34px;display:flex;align-items:center;font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:600">${i+1}</div>`).join('')}</div><div class="map-lines">`;
     Object.keys(zoneMap[zone])
       .sort((a, b) => (placesIndexX[a] || 0) - (placesIndexX[b] || 0))
       .forEach(ligne => {
