@@ -695,7 +695,7 @@ function getStatutAtDate(placeId, dateStr) {
   const dayStart = new Date(dateStr + 'T00:00:00').getTime();
   const dayEnd   = new Date(dateStr + 'T23:59:59').getTime();
 
-  const occ = occupationsRaw.find(o => {
+  const occs = occupationsRaw.filter(o => {
     const pid = Array.isArray(o.place_id) ? o.place_id[0] : o.place_id;
     if (pid !== placeId) return false;
     const debut = o.debut ? new Date(o.debut).getTime() : null;
@@ -704,21 +704,14 @@ function getStatutAtDate(placeId, dateStr) {
     return debut <= dayEnd && fin >= dayStart;
   });
 
-  const resaEntrant = reservationsRaw.find(r => {
-    if (!r.place_code) return false;
-    const code = Array.isArray(r.place_code) ? r.place_code[0] : r.place_code;
-    if (code !== placeId) return false;
-    const arrivee = r.arrivee ? new Date(r.arrivee).getTime() : null;
-    return arrivee && arrivee >= dayStart && arrivee <= dayEnd;
-  });
-
-  const hasDepart  = occ && new Date(occ.fin).getTime() <= dayEnd && new Date(occ.fin).getTime() >= dayStart;
-  const hasArrivee = !!resaEntrant;
+  const hasDepart  = occs.some(o => new Date(o.fin).getTime() >= dayStart && new Date(o.fin).getTime() <= dayEnd);
+  const hasArrivee = occs.some(o => new Date(o.debut).getTime() >= dayStart && new Date(o.debut).getTime() <= dayEnd);
+  const hasOccupe  = occs.some(o => new Date(o.debut).getTime() < dayStart && new Date(o.fin).getTime() > dayEnd);
 
   if (hasDepart && hasArrivee) return 'transition';
   if (hasDepart)   return 'depart';
   if (hasArrivee)  return 'arrivee';
-  if (occ)         return 'occupe';
+  if (hasOccupe)   return 'occupe';
   return 'libre';
 }
   
