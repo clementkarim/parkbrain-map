@@ -383,8 +383,9 @@ let placesIndex     = {};   // { ligne: [y, ...] }
 let placesIndexX    = {};   // { ligne: x }
 let placeById       = {};   // { id: placeObj }
 let placeByCode     = {};   // { 'ligne_y': placeObj }
-let occByPlaceId    = {};   // { place_record_id: [occObj, ...] }
-let resByPlaceId    = {};   // { place_record_id: resObj }
+let occByPlaceId    = {};
+let resByPlaceId    = {};
+let resByRecordId   = {};   // { airtable_record_id: resObj } — index global
 let selectedPlaceId = null;
 let selectedResId   = null;
 
@@ -515,7 +516,40 @@ async function loadReservations() {
   });
   console.log(reservationsRaw.map(r => ({ id: r.id, statut: r.statut })));
 }
-
+async function loadAllReservations() {
+  const recs = await atFetch(
+    T_RES,
+    `NOT({Statut_Reservation} = 'Annul\u00e9e')`,
+    ['Booking_ID', 'Client_Booking_Ref', 'Statut_Reservation',
+     'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
+     'DateHeure_Arrivee', 'DateHeure_Retour',
+     'Incoherence_Statut', 'Voiture_A_Deplacer',
+     'Occupations 2', 'Parking', 'Place_Assignee_Code']
+  );
+  resByRecordId = {};
+  recs.forEach(r => {
+    const f = r.fields;
+    const ligne = Array.isArray(f.Place_Assignee_Ligne) ? f.Place_Assignee_Ligne[0] : (f.Place_Assignee_Ligne || null);
+    const y     = Array.isArray(f.Place_Assignee_Y)     ? f.Place_Assignee_Y[0]     : (f.Place_Assignee_Y ?? null);
+    resByRecordId[r.id] = {
+      id:          r.id,
+      booking_id:  f.Booking_ID || r.id,
+      client:      f.Client_Booking_Ref || 'Anonyme',
+      statut:      f.Statut_Reservation || '',
+      place_id:    Array.isArray(f.Place_Assignee_Algo) ? f.Place_Assignee_Algo[0] : null,
+      place_code:  Array.isArray(f.Place_Assignee_Code) ? f.Place_Assignee_Code[0] : (f.Place_Assignee_Code || null),
+      ligne:       ligne,
+      y:           y !== null ? Number(y) : null,
+      arrivee:     f.DateHeure_Arrivee || '',
+      retour:      f.DateHeure_Retour  || '',
+      incoherence: f['Incoherence_Statut'] || '',
+      a_deplacer:  f.Voiture_A_Deplacer || false,
+      occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
+      parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
+    };
+  });
+}
+  
 async function loadOccupations() {
   const now = new Date().toISOString();
   const recs = await atFetch(
@@ -544,11 +578,11 @@ async function loadOccupations() {
     occByPlaceId[o.place_record_id].push(o);
   });
 
-  resByPlaceId = {};
-  reservationsRaw.forEach(r => {
-    if (r.place_id && r.statut !== 'Annul\u00e9e') {
-      resByPlaceId[r.place_id] = r;
-    }
+resByPlaceId = {};
+  occupationsRaw.forEach(o => {
+    if (!o.place_record_id || !o.res_ids.length) return;
+    const res = resByRecordId[o.res_ids[0]];
+    if (res) resByPlaceId[o.place_record_id] = res;
   });
 }
 
@@ -1226,7 +1260,7 @@ async function reload() {
   document.getElementById('main').style.display    = 'none';
 
   try {
-    await Promise.all([loadPlaces(), loadReservations()]);
+    await Promise.all([loadPlaces(), loadReservations(), loadAllReservations()]);
     await loadOccupations();
     renderProblems();
     renderMap();
