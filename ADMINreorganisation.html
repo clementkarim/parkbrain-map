@@ -584,6 +584,9 @@ resByPlaceId = {};
     const res = resByRecordId[o.res_ids[0]];
     if (res) resByPlaceId[o.place_record_id] = res;
   });
+  console.log('resByRecordId size:', Object.keys(resByRecordId).length);
+  console.log('occupationsRaw sample:', occupationsRaw[0]);
+  console.log('resByPlaceId size:', Object.keys(resByPlaceId).length);
 }
 
 // ─── PROBLEM DETECTION ─────────────────────────────────────────────────────────
