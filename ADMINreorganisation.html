@@ -582,6 +582,9 @@ async function loadOccupations() {
   const placeByTextId = {};
   placesRaw.forEach(p => { if (p.place_id) placeByTextId[p.place_id] = p; });
 
+const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+  const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
+
   resByPlaceId = {};
   occupationsRaw.forEach(o => {
     if (!o.res_ids.length) return;
@@ -589,6 +592,11 @@ async function loadOccupations() {
     if (!pid) return;
     const place = placeByTextId[pid];
     if (!place) return;
+    // Filtrer par date sélectionnée
+    const debut = o.debut ? new Date(o.debut).getTime() : null;
+    const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
+    if (!debut || !fin) return;
+    if (debut > dayEnd || fin < dayStart) return;
     const res = resByRecordId[o.res_ids[0]];
     if (res) resByPlaceId[place.id] = res;
   });
