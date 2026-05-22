@@ -164,6 +164,9 @@
     .place-circle.occupied { background: var(--blue-dim); color: var(--blue); border-color: var(--blue-b); }
     .place-circle.garee   { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-b); }
     .place-circle.problem { background: var(--red-dim); color: var(--red); border-color: var(--red-b); animation: pulse-problem 2s infinite; }
+    .place-circle.arrivee   { background: var(--blue-dim); color: var(--blue); border-color: var(--blue-b); }
+    .place-circle.depart    { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-b); }
+    .place-circle.transition { background: linear-gradient(90deg, var(--amber-dim) 50%, var(--blue-dim) 50%); color: var(--text); border-color: var(--border-lt); }
     .place-circle.selected { background: var(--green-dim) !important; color: var(--green) !important; border-color: var(--green) !important; box-shadow: 0 0 12px rgba(31,212,160,.3); }
     @keyframes pulse-problem {
       0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.3); }
@@ -346,8 +349,10 @@
     <div id="map-container">
       <div class="legend">
         <div class="legend-item"><div class="legend-dot free"></div><span>Libre</span></div>
-        <div class="legend-item"><div class="legend-dot occupied"></div><span>Réservée / À venir</span></div>
-        <div class="legend-item"><div class="legend-dot garee"></div><span>Garée</span></div>
+        <div class="legend-item"><div class="legend-dot occupied"></div><span>Occupée</span></div>
+        <div class="legend-item"><div class="legend-dot arrivee"></div><span>Arrivée</span></div>
+        <div class="legend-item"><div class="legend-dot depart"></div><span>Départ</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(90deg,var(--amber-dim) 50%,var(--blue-dim) 50%);border:1px solid var(--border-lt);"></div><span>Arrivée + Départ</span></div>
         <div class="legend-item"><div class="legend-dot problem"></div><span>Problème</span></div>
         <div class="legend-item"><div class="legend-dot selected"></div><span>Sélectionnée</span></div>
       </div>
@@ -472,7 +477,7 @@ async function loadReservations() {
     T_RES,
     `OR(IS_SAME({DateHeure_Arrivee}, '${selectedDate}', 'day'), IS_SAME({DateHeure_Retour}, '${selectedDate}', 'day'))`,
     [
-      'Booking_ID', 'Client_Booking_Ref',
+      'Booking_ID', 'Client_Booking_Ref', 'Place_Assignee_Code',
       'Statut_Reservation', 'Scenario_Assignation',
       'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
       'DateHeure_Arrivee', 'DateHeure_Retour',
@@ -503,6 +508,7 @@ async function loadReservations() {
       incoherence: f['Incoherence_Statut'] || '',
       a_deplacer:  f.Voiture_A_Deplacer || false,
       occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
+      place_code:  Array.isArray(f.Place_Assignee_Code) ? f.Place_Assignee_Code[0] : (f.Place_Assignee_Code || null),
       type_jour:   (f.DateHeure_Arrivee?.startsWith(selectedDate) && f.DateHeure_Retour?.startsWith(selectedDate)) ? 'arrivee+retour' : f.DateHeure_Arrivee?.startsWith(selectedDate) ? 'arrivee' : 'retour',
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
     };
@@ -514,8 +520,8 @@ async function loadOccupations() {
   const now = new Date().toISOString();
   const recs = await atFetch(
     T_OCC,
-    `IS_AFTER({Date_Fin}, '${now}')`,
-    ['R\u00e9servations', 'Place', 'Place_ID', 'X', 'Y', 'Date_Debut', 'Date_Fin', 'Statut_Occupation']
+'',
+    ['Place_ID', 'Date_Debut', 'Date_Fin', 'Statut_Occupation', 'R\u00e9servations']
   );
 
   occupationsRaw = recs.map(r => ({
@@ -622,6 +628,38 @@ function checkDateChangeConflicts(res, newArrivee, newRetour) {
   return result;
 }
 
+// ─── STATUT PAR DATE ───────────────────────────────────────────────────────────
+function getStatutAtDate(placeId, dateStr) {
+  const dayStart = new Date(dateStr + 'T00:00:00').getTime();
+  const dayEnd   = new Date(dateStr + 'T23:59:59').getTime();
+
+  const occ = occupationsRaw.find(o => {
+    const pid = Array.isArray(o.place_id) ? o.place_id[0] : o.place_id;
+    if (pid !== placeId) return false;
+    const debut = o.debut ? new Date(o.debut).getTime() : null;
+    const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
+    if (!debut || !fin) return false;
+    return debut <= dayEnd && fin >= dayStart;
+  });
+
+  const resaEntrant = reservationsRaw.find(r => {
+    if (!r.place_code) return false;
+    const code = Array.isArray(r.place_code) ? r.place_code[0] : r.place_code;
+    if (code !== placeId) return false;
+    const arrivee = r.arrivee ? new Date(r.arrivee).getTime() : null;
+    return arrivee && arrivee >= dayStart && arrivee <= dayEnd;
+  });
+
+  const hasDepart  = occ && new Date(occ.fin).getTime() <= dayEnd && new Date(occ.fin).getTime() >= dayStart;
+  const hasArrivee = !!resaEntrant;
+
+  if (hasDepart && hasArrivee) return 'transition';
+  if (hasDepart)   return 'depart';
+  if (hasArrivee)  return 'arrivee';
+  if (occ)         return 'occupe';
+  return 'libre';
+}
+  
 // ─── FREE PLACES ───────────────────────────────────────────────────────────────
 function getFreePlacesForPeriod(arrivee, retour, excludeOccId) {
   const arr = new Date(arrivee), ret = new Date(retour);
@@ -706,18 +744,19 @@ function renderMap() {
       .forEach(ligne => {
         html += `<div class="map-line"><div class="line-label">${ligne}</div><div class="line-places">`;
         zoneMap[zone][ligne].sort((a, b) => a.y - b.y).forEach(p => {
-          const res      = resByPlaceId[p.id];
-          const isGaree  = res && res.statut === 'Gar\u00e9e';
-          const isProblem = problemPlaceIds.has(p.id);
-          const isSelected = selectedPlaceId === p.id ||
-            (selectedResId && res && res.id === selectedResId);
+         const statut    = getStatutAtDate(p.place_id, selectedDate);
+      const res       = resByPlaceId[p.id];
+      const isProblem = problemPlaceIds.has(p.id);
+      const isSelected = selectedPlaceId === p.id ||
+        (selectedResId && res && res.id === selectedResId);
 
-          let cls = 'place-circle';
-          if (isSelected)      cls += ' selected';
-          else if (isProblem)  cls += ' problem';
-          else if (isGaree)    cls += ' garee';
-          else if (res)        cls += ' occupied';
-
+      let cls = 'place-circle';
+      if (isSelected)          cls += ' selected';
+      else if (isProblem)      cls += ' problem';
+      else if (statut === 'transition') cls += ' transition';
+      else if (statut === 'depart')     cls += ' depart';
+      else if (statut === 'arrivee')    cls += ' arrivee';
+      else if (statut === 'occupe')     cls += ' occupied';
           const title = res
             ? `${p.place_id} · Y${p.y} · ${res.booking_id} · ${res.statut}`
             : `${p.place_id} · Y${p.y} · Libre`;
