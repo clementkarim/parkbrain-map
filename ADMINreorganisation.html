@@ -619,7 +619,7 @@ function getProblems() {
   const problems = [];
   const seen = new Set();
 
-  reservationsRaw.forEach(res => {
+  Object.values(resByRecordId).forEach(res => {
     if (seen.has(res.id)) return;
 
     // 1. Place Non Trouvée
@@ -638,7 +638,7 @@ function getProblems() {
 
     // 3. Stacking conflicts (computed)
     if (res.ligne && res.y !== null) {
-      const conflicts = detectStackingConflicts(res, reservationsRaw);
+      const conflicts = detectStackingConflicts(res, Object.values(resByRecordId));
       if (conflicts.length > 0) {
         const blockedIds = [...new Set(conflicts.map(c => c.blocked_booking))].join(', ');
         problems.push({ type: 'stacking', res, label: 'Empilement', color: 'orange',
@@ -655,16 +655,22 @@ function getProblems() {
 // Conflit si res.y < other.y ET res.retour > other.retour
 function detectStackingConflicts(res, allRes) {
   if (!res.ligne || res.y === null) return [];
-  const resRet   = new Date(res.retour);
+  const resArr = new Date(res.arrivee);
+  const resRet = new Date(res.retour);
   const sameLine = allRes.filter(r =>
     r.id !== res.id && r.ligne === res.ligne && r.y !== null &&
     r.statut !== 'Annul\u00e9e' && r.statut !== 'Place Non Trouv\u00e9e'
   );
   return sameLine
-    .filter(other => res.y < other.y && resRet > new Date(other.retour))
+    .filter(other => {
+      // Y=1 bloque Y=2 uniquement si les deux sont présentes en même temps
+      const otherArr = new Date(other.arrivee);
+      const otherRet = new Date(other.retour);
+      const overlap  = resArr < otherRet && resRet > otherArr;
+      return res.y < other.y && overlap && resRet > otherRet;
+    })
     .map(other => ({ blocker: res.id, blocked: other.id, blocked_booking: other.booking_id }));
 }
-
 function checkDateChangeConflicts(res, newArrivee, newRetour) {
   const arr = new Date(newArrivee), ret = new Date(newRetour);
   const result = { direct: [], stacking: [] };
