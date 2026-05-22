@@ -853,14 +853,16 @@ function selectProblem(resId) {
 function onPlaceClick(placeId) {
   const place = placeById[placeId];
   if (!place) return;
-  const res = resByPlaceId[placeId];
+  const statut = getStatutAtDate(place.place_id, selectedDate);
+  const res = statut === 'arrivee'
+    ? resEntrantByPlaceId[placeId]
+    : resByPlaceId[placeId];
 
   if (selectedPlaceId === placeId) {
     selectedPlaceId = null; selectedResId = null; closePanel();
   } else {
     selectedPlaceId = placeId;
     selectedResId   = res ? res.id : null;
-  const statut = getStatutAtDate(place.place_id, selectedDate);
   const resEntrant = statut === 'transition' ? (resEntrantByPlaceId[placeId] || getResaEntranteForPlace(place.place_id)) : null;
     openPanel(res || null, place, resEntrant);
   }
