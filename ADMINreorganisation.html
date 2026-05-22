@@ -385,7 +385,8 @@ let placeById       = {};   // { id: placeObj }
 let placeByCode     = {};   // { 'ligne_y': placeObj }
 let occByPlaceId    = {};
 let resByPlaceId    = {};
-let resByRecordId   = {};   // { airtable_record_id: resObj } — index global
+let resByRecordId        = {};
+let resEntrantByPlaceId  = {};
 let selectedPlaceId = null;
 let selectedResId   = null;
 
@@ -584,7 +585,7 @@ async function loadOccupations() {
 
 const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
   const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
-
+resEntrantByPlaceId = {};
   resByPlaceId = {};
   occupationsRaw.forEach(o => {
     if (!o.res_ids.length) return;
@@ -597,8 +598,15 @@ const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
     const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
     if (!debut || !fin) return;
     if (debut > dayEnd || fin < dayStart) return;
-    const res = resByRecordId[o.res_ids[0]];
-    if (res) resByPlaceId[place.id] = res;
+const res = resByRecordId[o.res_ids[0]];
+    if (!res) return;
+    if (debut < dayStart) {
+      // Occupation débutée avant aujourd'hui → sortante
+      resByPlaceId[place.id] = res;
+    } else {
+      // Occupation débutant aujourd'hui → entrante
+      resEntrantByPlaceId[place.id] = res;
+    }
   });
   console.log('resByRecordId size:', Object.keys(resByRecordId).length);
   console.log('occ sample res_ids:', occupationsRaw[0]?.res_ids);
@@ -852,8 +860,8 @@ function onPlaceClick(placeId) {
   } else {
     selectedPlaceId = placeId;
     selectedResId   = res ? res.id : null;
-    const statut = getStatutAtDate(place.place_id, selectedDate);
-    const resEntrant = statut === 'transition' ? getResaEntranteForPlace(place.place_id) : null;
+  const statut = getStatutAtDate(place.place_id, selectedDate);
+  const resEntrant = statut === 'transition' ? (resEntrantByPlaceId[placeId] || getResaEntranteForPlace(place.place_id)) : null;
     openPanel(res || null, place, resEntrant);
   }
   renderMap(); renderProblems();
