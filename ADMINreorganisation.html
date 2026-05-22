@@ -585,7 +585,8 @@ resByPlaceId = {};
     if (res) resByPlaceId[o.place_record_id] = res;
   });
   console.log('resByRecordId size:', Object.keys(resByRecordId).length);
-  console.log('occupationsRaw sample:', occupationsRaw[0]);
+  console.log('occ sample res_ids:', occupationsRaw[0]?.res_ids);
+  console.log('occ sample place_record_id:', occupationsRaw[0]?.place_record_id);
   console.log('resByPlaceId size:', Object.keys(resByPlaceId).length);
 }
 
