@@ -145,13 +145,14 @@
       margin-bottom: 10px; padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
     }
-    .map-lines { display: flex; flex-direction: column; gap: 7px; }
-    .map-line { display: flex; align-items: center; gap: 10px; }
-    .line-label {
-      font-family: var(--mono); font-size: 11px; font-weight: 600;
-      color: var(--muted); width: 40px; flex-shrink: 0; text-align: right;
-    }
-    .line-places { display: flex; gap: 5px; flex-wrap: wrap; }
+.map-lines { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.map-line { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.line-label {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--muted); text-align: center; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border); width: 100%;
+}
+.line-places { display: flex; flex-direction: column; gap: 5px; }
     .place-circle {
       width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
