@@ -631,6 +631,8 @@ function render() {
     statut: getStatutAtDate(p.Place_ID, dateStr)
   }));
 
+  window._places = placesWithStatut;
+
   const libres    = placesWithStatut.filter(p => p.statut === "libre").length;
   const arrivees  = placesWithStatut.filter(p => p.statut === "arrivee" || p.statut === "transition").length;
   const departs   = placesWithStatut.filter(p => p.statut === "depart" || p.statut === "transition").length;
@@ -787,6 +789,7 @@ async function openModal(placeId, dateStr) {
 
   const dayStart = new Date(dateStr + "T00:00:00").getTime();
   const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
+  const statut = (window._places || []).find(p => p.Place_ID === placeId)?.statut || "";
   const ts = new Date(dateStr + "T12:00:00").getTime();
 
   try {
@@ -801,7 +804,7 @@ async function openModal(placeId, dateStr) {
       return debut && fin && debut <= dayEnd && fin >= dayStart;
     });
 
-    if (occ && occ._reservationIds && occ._reservationIds.length > 0) {
+    if (statut !== "arrivee" && occ && occ._reservationIds && occ._reservationIds.length > 0) {
       const resaId = occ._reservationIds[0];
       const res = await fetch(
         `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent("Réservations")}/${resaId}`,
