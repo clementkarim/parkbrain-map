@@ -586,8 +586,8 @@ function getStatutAtDate(placeId, dateStr) {
   const dayStart = new Date(dateStr + "T00:00:00").getTime();
   const dayEnd   = new Date(dateStr + "T23:59:59").getTime();
 
-  // Chercher une occupation qui chevauche la journée
-  const occ = allOccupations.find(o => {
+  // Chercher TOUTES les occupations qui chevauchent la journée
+  const occs = allOccupations.filter(o => {
     const pid = Array.isArray(o.Place_ID) ? o.Place_ID[0] : o.Place_ID;
     if (pid !== placeId) return false;
     const debut = o.Date_Debut ? new Date(o.Date_Debut).getTime() : null;
@@ -595,6 +595,24 @@ function getStatutAtDate(placeId, dateStr) {
     if (!debut || !fin) return false;
     return debut <= dayEnd && fin >= dayStart;
   });
+
+  // Chercher une réservation entrante
+  const resaEntrant = allReservations.find(r => {
+    const code = Array.isArray(r.Place_Assignee_Code) ? r.Place_Assignee_Code[0] : r.Place_Assignee_Code;
+    if (code !== placeId) return false;
+    const arrivee = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+    return arrivee && arrivee >= dayStart && arrivee <= dayEnd;
+  });
+
+  const hasDepart  = occs.some(o => new Date(o.Date_Fin).getTime() >= dayStart && new Date(o.Date_Fin).getTime() <= dayEnd);
+  const hasArrivee = !!resaEntrant;
+
+  if (hasDepart && hasArrivee) return "transition";
+  if (hasDepart) return "depart";
+  if (hasArrivee) return "arrivee";
+  if (occs.length > 0) return "occupe";
+  return "libre";
+}
 
   // Chercher une réservation entrante (arrivée dans la journée)
   const resaEntrant = allReservations.find(r => {
