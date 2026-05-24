@@ -614,25 +614,6 @@ function getStatutAtDate(placeId, dateStr) {
   return "libre";
 }
 
-  // Chercher une réservation entrante (arrivée dans la journée)
-  const resaEntrant = allReservations.find(r => {
-    const code = Array.isArray(r.Place_Assignee_Code) ? r.Place_Assignee_Code[0] : r.Place_Assignee_Code;
-    if (code !== placeId) return false;
-    const arrivee = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
-    if (!arrivee) return false;
-    return arrivee >= dayStart && arrivee <= dayEnd;
-  });
-
-  const hasDepart = occ && new Date(occ.Date_Fin).getTime() <= dayEnd && new Date(occ.Date_Fin).getTime() >= dayStart;
-  const hasArrivee = !!resaEntrant;
-
-  if (hasDepart && hasArrivee) return "transition";
-  if (hasDepart) return "depart";
-  if (hasArrivee) return "arrivee";
-  if (occ) return "occupe";
-  return "libre";
-}
-
 // ─── Rendu ────────────────────────────────
 function render() {
   const dateStr = document.getElementById("filterDate").value || todayStr;
