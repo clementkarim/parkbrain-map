@@ -1203,17 +1203,36 @@ const newStatut = document.getElementById('new-statut')?.value;
       resPatch.Voiture_A_Deplacer = true;
     }
 
-    const patches = [patchRecord(T_RES, resId, resPatch)];
-    if (res.occ_id) {
-      patches.push(patchRecord(T_OCC, res.occ_id, {
-        Place:    [newPlace.id],
-        Place_ID: newPlace.place_id,
-        X:        newPlace.x,
-        Y:        newPlace.y,
-      }));
+if (res.occ_id) {
+      // Occupation existante → PATCH
+      await Promise.all([
+        patchRecord(T_RES, resId, resPatch),
+        patchRecord(T_OCC, res.occ_id, {
+          Place:    [newPlace.id],
+          Place_ID: newPlace.place_id,
+          X:        newPlace.x,
+          Y:        newPlace.y,
+        })
+      ]);
+    } else {
+      // Pas d'occupation → créer + lier
+      const occFields = {
+        'R\u00e9servations': [resId],
+        Place:             [newPlace.id],
+        Place_ID:          newPlace.place_id,
+        X:                 newPlace.x,
+        Y:                 newPlace.y,
+        Date_Debut:        res.arrivee,
+        Date_Fin:          res.retour,
+        Source_Occupation: 'Manuelle',
+        Statut_Occupation: 'Pr\u00e9vu',
+      };
+      if (res.parking_id) occFields.Parking = [res.parking_id];
+      const newOcc = await postRecord(T_OCC, occFields);
+      resPatch['Occupations 2'] = [newOcc.id];
+      await patchRecord(T_RES, resId, resPatch);
     }
-
-    await Promise.all(patches);
+    
     toast(
       `R\u00e9assign\u00e9 \u2192 ${ligne}/Y${y}${isGaree ? ' — \u00e0 d\u00e9placer' : ''}`,
       isGaree ? 'wrn' : 'ok'
