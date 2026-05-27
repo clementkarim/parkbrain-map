@@ -1208,7 +1208,8 @@ if (res.occ_id) {
       await Promise.all([
         patchRecord(T_RES, resId, resPatch),
 patchRecord(T_OCC, res.occ_id, {
-          Place: [newPlace.id],
+          Place:             [newPlace.id],
+          Source_Occupation: 'Manuelle',
         })
       ]);
 } else {
