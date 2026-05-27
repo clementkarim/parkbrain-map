@@ -1207,11 +1207,8 @@ if (res.occ_id) {
       // Occupation existante → PATCH
       await Promise.all([
         patchRecord(T_RES, resId, resPatch),
-        patchRecord(T_OCC, res.occ_id, {
-          Place:    [newPlace.id],
-          Place_ID: newPlace.place_id,
-          X:        newPlace.x,
-          Y:        newPlace.y,
+patchRecord(T_OCC, res.occ_id, {
+          Place: [newPlace.id],
         })
       ]);
 } else {
