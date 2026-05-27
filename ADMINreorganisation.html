@@ -1217,16 +1217,14 @@ if (res.occ_id) {
 } else {
       // Pas d'occupation → créer + lier
       console.log('Création occupation pour resId:', resId, 'place:', newPlace.id, 'arrivee:', res.arrivee, 'retour:', res.retour);
-      const occFields = {
+const occFields = {
         'R\u00e9servations': [resId],
-        Place_ID:          newPlace.place_id,
-        X:                 newPlace.x,
-        Y:                 newPlace.y,
+        Place:             [newPlace.id],
         Date_Debut:        res.arrivee,
         Date_Fin:          res.retour,
         Source_Occupation: 'Manuelle',
-        Statut_Occupation: 'Pr\u00e9vu',
       };
+  
       if (res.parking_id) occFields.Parking = [res.parking_id];
 const newOcc = await postRecord(T_OCC, occFields);
       console.log('Occupation créée:', newOcc);
