@@ -1214,11 +1214,11 @@ if (res.occ_id) {
           Y:        newPlace.y,
         })
       ]);
-    } else {
+} else {
       // Pas d'occupation → créer + lier
+      console.log('Création occupation pour resId:', resId, 'place:', newPlace.id, 'arrivee:', res.arrivee, 'retour:', res.retour);
       const occFields = {
         'R\u00e9servations': [resId],
-        Place:             [newPlace.id],
         Place_ID:          newPlace.place_id,
         X:                 newPlace.x,
         Y:                 newPlace.y,
@@ -1228,7 +1228,8 @@ if (res.occ_id) {
         Statut_Occupation: 'Pr\u00e9vu',
       };
       if (res.parking_id) occFields.Parking = [res.parking_id];
-      const newOcc = await postRecord(T_OCC, occFields);
+const newOcc = await postRecord(T_OCC, occFields);
+      console.log('Occupation créée:', newOcc);
       resPatch['Occupations 2'] = [newOcc.id];
       await patchRecord(T_RES, resId, resPatch);
     }
@@ -1261,18 +1262,14 @@ async function doAssignFree(placeId) {
 
   try {
     // Create new occupation
-    const occFields = {
-      'R\u00e9servations': [resId],
-      Place:             [placeId],
-      Place_ID:          place.place_id,
-      X:                 place.x,
-      Y:                 place.y,
-      Date_Debut:        res.arrivee,
-      Date_Fin:          res.retour,
-      Source_Occupation: 'Manuelle',
-      Statut:            'Pr\u00e9vu',
-    };
-    if (res.parking_id) occFields.Parking = [res.parking_id];
+const occFields = {
+        'R\u00e9servations': [resId],
+        Place:             [newPlace.id],
+        Date_Debut:        res.arrivee,
+        Date_Fin:          res.retour,
+        Source_Occupation: 'Manuelle',
+      };
+      if (res.parking_id) occFields.Parking = [res.parking_id];
     const newOcc = await postRecord(T_OCC, occFields);
 
     // Patch reservation
