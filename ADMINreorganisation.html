@@ -1174,8 +1174,8 @@ async function doReassign(resId, currentPlaceId, isGareeStr) {
   console.log('newPlace found:', newPlace);
   if (!newPlace) { toast('Place introuvable dans l\'index', 'err'); return; }
 
-  const res = reservationsRaw.find(r => r.id === resId);
-  if (!res) return;
+const res = reservationsRaw.find(r => r.id === resId) || resByRecordId[resId];
+  if (!res) { toast('Réservation introuvable', 'err'); return; }
 
   const btn = document.getElementById('btn-reassign');
   btn.disabled = true; btn.textContent = 'En cours...';
