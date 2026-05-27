@@ -958,6 +958,15 @@ ${resEntrant ? `
       <div class="section-title">R\u00e9assigner</div>
       ${isGaree ? `<div class="warning-badge">⚠ Mouvement physique requis</div>` : ''}
       <div class="field-row">
+        <label>Statut après réassignation</label>
+        <select id="new-statut">
+          <option value="Place assign\u00e9e">Place assign\u00e9e</option>
+          <option value="Arriv\u00e9e Pr\u00e9vue">Arriv\u00e9e Pr\u00e9vue</option>
+          <option value="Assign\u00e9e - \u00c0 d\u00e9placer">Assign\u00e9e - \u00c0 d\u00e9placer</option>
+          <option value="Zone Tampon">Zone Tampon</option>
+        </select>
+      </div>
+      <div class="field-row">
         <label>Nouvelle ligne</label>
         <select id="new-ligne"
           onchange="onNewLigneChange('${res.arrivee}','${res.retour}','${res.occ_id || ''}')">
@@ -1188,9 +1197,10 @@ const res = reservationsRaw.find(r => r.id === resId) || resByRecordId[resId];
       Place_Terrain_Y:         null,
       Place_Terrain_Confirmee: false,
     };
-    if (isGaree) {
+const newStatut = document.getElementById('new-statut')?.value;
+    if (newStatut) resPatch.Statut_Reservation = newStatut;
+    if (isGaree || newStatut === 'Assign\u00e9e - \u00c0 d\u00e9placer') {
       resPatch.Voiture_A_Deplacer = true;
-      resPatch.Statut_Reservation = 'En attente';
     }
 
     const patches = [patchRecord(T_RES, resId, resPatch)];
