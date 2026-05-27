@@ -1169,7 +1169,9 @@ async function doReassign(resId, currentPlaceId, isGareeStr) {
   const isGaree  = isGareeStr === 'true';
   const ligne    = document.getElementById('new-ligne').value;
   const y        = Number(document.getElementById('new-y').value);
+  console.log('doReassign called:', { resId, ligne, y });
   const newPlace = placeByCode[`${ligne}_${y}`];
+  console.log('newPlace found:', newPlace);
   if (!newPlace) { toast('Place introuvable dans l\'index', 'err'); return; }
 
   const res = reservationsRaw.find(r => r.id === resId);
