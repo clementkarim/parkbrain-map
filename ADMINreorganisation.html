@@ -1124,8 +1124,9 @@ const arrVal = arrInput.value;
   console.log('arrVal:', arrVal, '| retVal:', retVal);
   if (!arrVal || !retVal) { btn.disabled = true; return; }
 
-  const newArr = new Date(arrVal).toISOString();
+const newArr = new Date(arrVal).toISOString();
   const newRet = new Date(retVal).toISOString();
+  console.log('newArr ISO:', newArr, '| res.arrivee:', res.arrivee);
   const res    = reservationsRaw.find(r => r.id === resId);
   if (!res) return;
 
