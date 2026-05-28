@@ -1126,8 +1126,7 @@ const arrVal = arrInput.value;
 
   const newArr = arrVal + ':00.000Z';
   const newRet = retVal + ':00.000Z';
-  console.log('newArr ISO:', newArr, '| res.arrivee:', res.arrivee);
-  const res    = reservationsRaw.find(r => r.id === resId);
+  const res    = reservationsRaw.find(r => r.id === resId) || resByRecordId[resId];
   if (!res) return;
 
   if (new Date(newArr).getTime() === new Date(res.arrivee).getTime() &&
