@@ -1210,14 +1210,14 @@ const newStatut = document.getElementById('new-statut')?.value;
 
 if (res.occ_id) {
       // Occupation existante → PATCH
-      const patches = [patchRecord(T_RES, resId, resPatch)];
-      if (!isGaree) {
-        patches.push(patchRecord(T_OCC, res.occ_id, {
+    await Promise.all([
+        patchRecord(T_RES, resId, resPatch),
+        patchRecord(T_OCC, res.occ_id, {
           Place:             [newPlace.id],
           Source_Occupation: 'Manuelle',
-        }));
-      }
-      await Promise.all(patches);
+        })
+      ]);
+  
 } else {
       // Pas d'occupation → créer + lier
       console.log('Création occupation pour resId:', resId, 'place:', newPlace.id, 'arrivee:', res.arrivee, 'retour:', res.retour);
