@@ -1127,7 +1127,8 @@ function onDateChange(resId) {
   const res    = reservationsRaw.find(r => r.id === resId);
   if (!res) return;
 
-  if (newArr === res.arrivee && newRet === res.retour) {
+if (new Date(newArr).getTime() === new Date(res.arrivee).getTime() &&
+      new Date(newRet).getTime() === new Date(res.retour).getTime()) {
     info.style.display = 'none'; btn.disabled = true; return;
   }
 
