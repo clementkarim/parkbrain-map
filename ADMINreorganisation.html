@@ -1113,6 +1113,7 @@ function onNewYChange(currentLigne, currentY) {
 }
 
 function onDateChange(resId) {
+  console.log('onDateChange called, resId:', resId);
   const arrInput = document.getElementById('mod-arrivee');
   const retInput = document.getElementById('mod-retour');
   const info     = document.getElementById('date-conflict-info');
