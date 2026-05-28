@@ -1129,7 +1129,9 @@ const arrVal = arrInput.value;
   const res    = reservationsRaw.find(r => r.id === resId);
   if (!res) return;
 
-if (new Date(newArr).getTime() === new Date(res.arrivee).getTime() &&
+console.log('newArr:', newArr, '| res.arrivee:', res.arrivee);
+  console.log('newRet:', newRet, '| res.retour:', res.retour);
+  if (new Date(newArr).getTime() === new Date(res.arrivee).getTime() &&
       new Date(newRet).getTime() === new Date(res.retour).getTime()) {
     info.style.display = 'none'; btn.disabled = true; return;
   }
