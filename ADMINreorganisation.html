@@ -1118,8 +1118,9 @@ function onDateChange(resId) {
   const info     = document.getElementById('date-conflict-info');
   const btn      = document.getElementById('btn-date');
 
-  const arrVal = arrInput.value;
+const arrVal = arrInput.value;
   const retVal = retInput.value;
+  console.log('arrVal:', arrVal, '| retVal:', retVal);
   if (!arrVal || !retVal) { btn.disabled = true; return; }
 
   const newArr = new Date(arrVal).toISOString();
