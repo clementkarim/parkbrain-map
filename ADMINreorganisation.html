@@ -998,15 +998,15 @@ ${resEntrant ? `
       <div class="section-title">Modifier les dates</div>
       <div class="field-row">
         <label>Arriv\u00e9e</label>
-        <input type="datetime-local" id="mod-arrivee"
+<input type="datetime-local" id="mod-arrivee"
           value="${toDatetimeLocal(res.arrivee)}"
-          onchange="onDateChange('${res.id}')">
+          oninput="onDateChange('${res.id}')">
       </div>
       <div class="field-row">
         <label>Retour client</label>
-        <input type="datetime-local" id="mod-retour"
+<input type="datetime-local" id="mod-retour"
           value="${toDatetimeLocal(res.retour)}"
-          onchange="onDateChange('${res.id}')">
+          oninput="onDateChange('${res.id}')">
       </div>
       <div id="date-conflict-info" style="display:none"></div>
       <button class="btn-action amber" id="btn-date" disabled
