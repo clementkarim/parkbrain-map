@@ -1193,13 +1193,15 @@ const res = reservationsRaw.find(r => r.id === resId) || resByRecordId[resId];
   btn.disabled = true; btn.textContent = 'En cours...';
 
   try {
-    const resPatch = {
-      Place_Assignee_Algo:     [newPlace.id],
-      Scenario_Assignation:    'Manuelle',
-      Place_Terrain_Ligne:     '',
-      Place_Terrain_Y:         null,
-      Place_Terrain_Confirmee: false,
+const resPatch = {
+      Place_Assignee_Algo:  [newPlace.id],
+      Scenario_Assignation: 'Manuelle',
     };
+    if (!isGaree) {
+      resPatch.Place_Terrain_Ligne     = '';
+      resPatch.Place_Terrain_Y         = null;
+      resPatch.Place_Terrain_Confirmee = false;
+    }
 const newStatut = document.getElementById('new-statut')?.value;
     if (newStatut) resPatch.Statut_Reservation = newStatut;
     if (isGaree || newStatut === 'Assign\u00e9e - \u00c0 d\u00e9placer') {
