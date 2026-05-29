@@ -479,7 +479,7 @@ async function loadReservations() {
     T_RES,
     `OR(IS_SAME({DateHeure_Arrivee}, '${selectedDate}', 'day'), IS_SAME({DateHeure_Retour}, '${selectedDate}', 'day'))`,
     [
-      'Booking_ID', 'Client_Booking_Ref', 'Place_Assignee_Code',
+      'Booking_ID', 'Client_Booking_Ref', 'Place_Terrain_Ligne', 'Place_Terrain_Y', 'Place_Assignee_Code',
       'Statut_Reservation', 'Scenario_Assignation',
       'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
       'DateHeure_Arrivee', 'DateHeure_Retour',
@@ -509,7 +509,9 @@ async function loadReservations() {
       retour:      f.DateHeure_Retour  || '',
       incoherence: f['Incoherence_Statut'] || '',
       a_deplacer:  f.Voiture_A_Deplacer || false,
-      occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
+      occ_id:        Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
+      terrain_ligne: f.Place_Terrain_Ligne || null,
+      terrain_y:     f.Place_Terrain_Y ?? null,
       place_code:  Array.isArray(f.Place_Assignee_Code) ? f.Place_Assignee_Code[0] : (f.Place_Assignee_Code || null),
       type_jour:   (f.DateHeure_Arrivee?.startsWith(selectedDate) && f.DateHeure_Retour?.startsWith(selectedDate)) ? 'arrivee+retour' : f.DateHeure_Arrivee?.startsWith(selectedDate) ? 'arrivee' : 'retour',
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
@@ -525,7 +527,8 @@ async function loadAllReservations() {
      'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
      'DateHeure_Arrivee', 'DateHeure_Retour',
      'Incoherence_Statut', 'Voiture_A_Deplacer',
-     'Occupations 2', 'Parking', 'Place_Assignee_Code']
+     'Occupations 2', 'Parking', 'Place_Assignee_Code',
+     'Place_Terrain_Ligne', 'Place_Terrain_Y']
   );
   resByRecordId = {};
   recs.forEach(r => {
@@ -546,7 +549,9 @@ async function loadAllReservations() {
       incoherence: f['Incoherence_Statut'] || '',
       a_deplacer:  f.Voiture_A_Deplacer || false,
       occ_id:      Array.isArray(f['Occupations 2']) ? f['Occupations 2'][0] : null,
-      parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
+      parking_id:      Array.isArray(f.Parking) ? f.Parking[0] : null,
+      terrain_ligne:   f.Place_Terrain_Ligne || null,
+      terrain_y:       f.Place_Terrain_Y ?? null,
     };
   });
 }
@@ -638,8 +643,10 @@ const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
 
     // 2. Incohérence
     if (res.incoherence === 'A v\u00e9rifier') {
+      const algoStr    = res.ligne ? `${res.ligne}/Y${res.y}` : '—';
+      const terrainStr = res.terrain_ligne ? `${res.terrain_ligne}/Y${res.terrain_y}` : '—';
       problems.push({ type: 'incoherence', res, label: 'Incoh\u00e9rence', color: 'amber',
-        detail: 'Conflit terrain d\u00e9tect\u00e9' });
+        detail: `Algo : ${algoStr} → Terrain : ${terrainStr}` });
       seen.add(res.id); return;
     }
 
@@ -939,7 +946,7 @@ const isGaree  = res.statut === 'Gar\u00e9e';
           <strong class="${res.occ_id ? 'text-green' : 'text-red'}">${res.occ_id ? '✓ Li\u00e9e' : '— Absente'}</strong>
         </div>
         ${res.incoherence ? `<div class="info-item" style="grid-column:1/-1">
-          <span>Incoh\u00e9rence</span><strong class="text-amber">${res.incoherence}</strong>
+          <span>Incoh\u00e9rence</span><strong class="text-amber">${res.incoherence} — Algo : ${res.ligne || '—'}/Y${res.y ?? '—'} → Terrain : ${res.terrain_ligne || '—'}/Y${res.terrain_y ?? '—'}</strong>
         </div>` : ''}
       </div>
     </div>
