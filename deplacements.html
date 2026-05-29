@@ -451,7 +451,7 @@ async function loadAndRender() {
     "Place_Assignee_Ligne", "Place_Assignee_Y",
     "Place_Terrain_Ligne", "Place_Terrain_Y",
     "Voiture_A_Deplacer", "Statut_Reservation"
-  ], `AND({Voiture_A_Deplacer} = TRUE(), {Statut_Reservation} = "Assignée - À déplacer")`);
+  ], `AND({Voiture_A_Deplacer} = TRUE(), {Statut_Reservation} = "Assignée - À déplacer", {Place_Terrain_Confirmee} = TRUE())`);
 
   allDeplacements = resaRaw
     .map(r => ({ id: r.id, ...r.fields }))
