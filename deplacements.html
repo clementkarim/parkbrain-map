@@ -450,8 +450,8 @@ async function loadAndRender() {
     "DateHeure_Retour", "Statut_Reservation",
     "Place_Assignee_Ligne", "Place_Assignee_Y",
     "Place_Terrain_Ligne", "Place_Terrain_Y",
-    "Voiture_A_Deplacer"
-  ], `{Voiture_A_Deplacer} = TRUE()`);
+    "Voiture_A_Deplacer", "Statut_Reservation"
+  ], `AND({Voiture_A_Deplacer} = TRUE(), {Statut_Reservation} = "Garée")`);
 
   allDeplacements = resaRaw
     .map(r => ({ id: r.id, ...r.fields }))
@@ -567,12 +567,17 @@ async function marquerDeplace(recordId) {
   btn.textContent = "Enregistrement...";
 
   try {
+    // Récupérer la résa pour avoir les valeurs algo
+    const resa = allDeplacements.find(r => r.id === recordId);
+    const algoLigne = Array.isArray(resa.Place_Assignee_Ligne) ? resa.Place_Assignee_Ligne[0] : (resa.Place_Assignee_Ligne || null);
+    const algoY     = Array.isArray(resa.Place_Assignee_Y)     ? resa.Place_Assignee_Y[0]     : (resa.Place_Assignee_Y     ?? null);
+
     await patchRecord(CONFIG.TABLE_RESERVATIONS, recordId, {
       "Voiture_A_Deplacer": false,
-      "Place_Terrain_Confirmee": false,
-      "Place_Terrain_Ligne": null,
-      "Place_Terrain_Y": null,
-      "Statut_Reservation": "En attente"
+      "Place_Terrain_Ligne": algoLigne,
+      "Place_Terrain_Y": algoY != null ? parseFloat(algoY) : null,
+      "Place_Terrain_Confirmee": true,
+      "Statut_Reservation": "Garée"
     });
 
     allDeplacements = allDeplacements.filter(r => r.id !== recordId);
