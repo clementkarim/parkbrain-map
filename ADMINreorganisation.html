@@ -945,8 +945,8 @@ const isGaree  = res.statut === 'Gar\u00e9e';
         <div class="info-item"><span>Occupation</span>
           <strong class="${res.occ_id ? 'text-green' : 'text-red'}">${res.occ_id ? '✓ Li\u00e9e' : '— Absente'}</strong>
         </div>
-        ${res.incoherence ? `<div class="info-item" style="grid-column:1/-1">
-          <span>Incoh\u00e9rence</span><strong class="text-amber">${res.incoherence} — Algo : ${res.ligne || '—'}/Y${res.y ?? '—'} → Terrain : ${res.terrain_ligne || '—'}/Y${res.terrain_y ?? '—'}</strong>
+        ${res.incoherence === 'A v\u00e9rifier' ? `<div class="info-item" style="grid-column:1/-1">
+          <span>Incoh\u00e9rence</span><strong class="text-amber">Algo : ${res.ligne || '—'}/Y${res.y ?? '—'} → Terrain : ${res.terrain_ligne || '—'}/Y${res.terrain_y ?? '—'}</strong>
         </div>` : ''}
       </div>
     </div>
@@ -960,6 +960,27 @@ ${resEntrant ? `
         <div class="info-item"><span>Retour</span><strong>${fmtDate(resEntrant.retour)}</strong></div>
       </div>
     </div>` : ''}
+    ${(() => {
+      const conflicts = detectStackingConflicts(res, Object.values(resByRecordId).filter(r => {
+        const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+        const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
+        return r.arrivee && r.retour &&
+          new Date(r.arrivee).getTime() <= dayEnd &&
+          new Date(r.retour).getTime() >= dayStart;
+      }));
+      if (!conflicts.length) return '';
+      return `<div class="panel-section">
+        <div class="section-title" style="color:#fb923c">⚠ Empilement détecté</div>
+        ${conflicts.map(c => {
+          const blocked = resByRecordId[c.blocked];
+          return `<div class="conflict-item amber">
+            ${blocked ? blocked.booking_id : c.blocked_booking} — 
+            ${blocked ? (blocked.ligne + '/Y' + blocked.y) : '—'} — 
+            Retour : ${blocked ? fmtDate(blocked.retour) : '—'}
+          </div>`;
+        }).join('')}
+      </div>`;
+    })()}
     <!-- Réassignation -->
     <div class="panel-section">
       <div class="section-title">R\u00e9assigner</div>
