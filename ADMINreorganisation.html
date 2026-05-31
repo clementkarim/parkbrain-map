@@ -329,7 +329,10 @@
 <div id="loading"><div class="spinner"></div><p>Chargement...</p></div>
 
 <div id="main" style="display:none">
-
+<!-- Dashboard -->
+  <div id="dashboard-section" style="border-bottom:1px solid var(--border);background:var(--surface);padding:10px 20px;flex-shrink:0;">
+    <div id="dashboard-stats" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  </div>
   <!-- Problems -->
   <div id="problems-section">
     <div class="prob-header">
@@ -746,7 +749,58 @@ function getFreePlacesForPeriod(arrivee, retour, excludeOccId) {
   );
   return placesRaw.filter(p => !occupiedIds.has(p.id));
 }
+function renderDashboard() {
+  const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+  const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
 
+  // Entrantes et sortantes
+  const entrantes  = reservationsRaw.filter(r => r.arrivee && new Date(r.arrivee).getTime() >= dayStart && new Date(r.arrivee).getTime() <= dayEnd).length;
+  const sortantes  = reservationsRaw.filter(r => r.retour  && new Date(r.retour).getTime()  >= dayStart && new Date(r.retour).getTime()  <= dayEnd).length;
+
+  // Occupations actives sur la journée
+  const occsActives = occupationsRaw.filter(o => {
+    const debut = o.debut ? new Date(o.debut).getTime() : null;
+    const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
+    return debut && fin && debut <= dayEnd && fin >= dayStart;
+  });
+
+  // Taux d'occupation
+  const totalPlaces = placesRaw.length;
+  const tauxOcc = totalPlaces ? Math.round((occsActives.length / totalPlaces) * 100) : 0;
+
+  // Pic d'occupation — tranches de 30min sur la journée
+  let pic = 0;
+  for (let t = dayStart; t <= dayEnd; t += 30 * 60 * 1000) {
+    const count = occupationsRaw.filter(o => {
+      const debut = o.debut ? new Date(o.debut).getTime() : null;
+      const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
+      return debut && fin && debut <= t && fin >= t;
+    }).length;
+    if (count > pic) pic = count;
+  }
+
+  // Problèmes
+  const problems     = getProblems();
+  const nbIncoher    = problems.filter(p => p.type === 'incoherence').length;
+  const nbNonTrouvee = problems.filter(p => p.type === 'no_place').length;
+  const nbStack      = problems.filter(p => p.type === 'stacking').length;
+
+  const stat = (label, value, color) => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:100px">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">${label}</span>
+      <span style="font-family:var(--mono);font-size:16px;font-weight:600;color:${color}">${value}</span>
+    </div>`;
+
+  document.getElementById('dashboard-stats').innerHTML =
+    stat('Entrantes',     entrantes,            'var(--blue)') +
+    stat('Sortantes',     sortantes,            'var(--amber)') +
+    stat('Occupations',   occsActives.length,   'var(--text)') +
+    stat('Taux occ.',     tauxOcc + '%',        tauxOcc > 80 ? 'var(--red)' : tauxOcc > 50 ? 'var(--amber)' : 'var(--green)') +
+    stat('Pic journée',   pic,                  'var(--text)') +
+    stat('Incohérences',  nbIncoher,            nbIncoher  ? 'var(--amber)' : 'var(--green)') +
+    stat('Non trouvées',  nbNonTrouvee,         nbNonTrouvee ? 'var(--red)' : 'var(--green)') +
+    stat('Empilements',   nbStack,              nbStack    ? '#fb923c'      : 'var(--green)');
+}
 // ─── RENDER PROBLEMS ───────────────────────────────────────────────────────────
 function renderProblems() {
   const problems = getProblems();
@@ -860,7 +914,9 @@ function selectProblem(resId) {
     if (res) openPanel(res, res.place_id ? placeById[res.place_id] : null);
     else closePanel();
   }
-  renderProblems(); renderMap();
+  renderDashboard();
+    renderProblems();
+    renderMap();
 }
 
 function onPlaceClick(placeId) {
