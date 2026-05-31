@@ -750,6 +750,7 @@ function getFreePlacesForPeriod(arrivee, retour, excludeOccId) {
   return placesRaw.filter(p => !occupiedIds.has(p.id));
 }
 function renderDashboard() {
+  console.log('renderDashboard called, placesRaw:', placesRaw.length, 'occs:', occupationsRaw.length, 'el:', document.getElementById('dashboard-stats'));
   const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
   const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
 
