@@ -915,7 +915,6 @@ function selectProblem(resId) {
     if (res) openPanel(res, res.place_id ? placeById[res.place_id] : null);
     else closePanel();
   }
-  renderDashboard();
     renderProblems();
     renderMap();
 }
@@ -1443,6 +1442,7 @@ async function reload() {
   try {
     await Promise.all([loadPlaces(), loadReservations(), loadAllReservations()]);
     await loadOccupations();
+    renderDashboard();
     renderProblems();
     renderMap();
     document.getElementById('last-refresh').textContent =
