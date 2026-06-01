@@ -758,24 +758,24 @@ function renderDashboard() {
   const entrantes  = reservationsRaw.filter(r => r.arrivee && new Date(r.arrivee).getTime() >= dayStart && new Date(r.arrivee).getTime() <= dayEnd).length;
   const sortantes  = reservationsRaw.filter(r => r.retour  && new Date(r.retour).getTime()  >= dayStart && new Date(r.retour).getTime()  <= dayEnd).length;
 
-  // Occupations actives sur la journée
+  // Stock début de journée — voitures déjà présentes à 00:00
   const occsActives = occupationsRaw.filter(o => {
     const debut = o.debut ? new Date(o.debut).getTime() : null;
     const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
-    return debut && fin && debut <= dayEnd && fin >= dayStart;
+    return debut && fin && debut < dayStart && fin > dayStart;
   });
 
   // Taux d'occupation
   const totalPlaces = placesRaw.length;
   const tauxOcc = totalPlaces ? Math.round((occsActives.length / totalPlaces) * 100) : 0;
 
-  // Pic d'occupation — tranches de 30min sur la journée
+  // Pic journée — tranches de 30min, stock initial + entrées - sorties
   let pic = 0;
   for (let t = dayStart; t <= dayEnd; t += 30 * 60 * 1000) {
     const count = occupationsRaw.filter(o => {
       const debut = o.debut ? new Date(o.debut).getTime() : null;
       const fin   = o.fin   ? new Date(o.fin).getTime()   : null;
-      return debut && fin && debut <= t && fin >= t;
+      return debut && fin && debut <= t && fin > t;
     }).length;
     if (count > pic) pic = count;
   }
