@@ -333,18 +333,20 @@
   <div id="dashboard-section" style="border-bottom:1px solid var(--border);background:var(--surface);padding:10px 20px;flex-shrink:0;">
     <div id="dashboard-stats" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
   </div>
-  <!-- Problems -->
-  <div id="problems-section">
-    <div class="prob-header">
-      <span class="prob-title">Problèmes à traiter</span>
-      <span class="prob-count zero" id="prob-count">0</span>
-    </div>
-<div class="prob-header" style="padding-top:0">
-      <input type="date" id="date-picker" style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;outline:none;">
-    </div>
-    <div id="problems-list"></div>
+  
+<div style="border-bottom:1px solid var(--border);background:var(--surface);padding:8px 20px;flex-shrink:0;">
+    <input type="date" id="date-picker" style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;outline:none;">
   </div>
 
+<!-- Popover problèmes -->
+  <div id="problems-popover" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border-lt);border-radius:10px;padding:10px;width:300px;max-height:400px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <span id="popover-title" style="font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)"></span>
+      <button onclick="closePopover()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <div id="popover-list"></div>
+  </div>
+  
   <!-- Workspace -->
   <div id="workspace">
 
@@ -786,6 +788,13 @@ function renderDashboard() {
   const nbNonTrouvee = problems.filter(p => p.type === 'no_place').length;
   const nbStack      = problems.filter(p => p.type === 'stacking').length;
 
+const statBtn = (label, value, color, type) => `
+    <div onclick="openPopover(event, '${type}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:100px;cursor:${value > 0 ? 'pointer' : 'default'};transition:border-color .15s"
+      ${value > 0 ? `onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border)'"` : ''}>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">${label}</span>
+      <span style="font-family:var(--mono);font-size:16px;font-weight:600;color:${color}">${value}</span>
+    </div>`;
+  
   const stat = (label, value, color) => `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:100px">
       <span style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">${label}</span>
@@ -798,9 +807,9 @@ function renderDashboard() {
     stat('Occupations',   occsActives.length,   'var(--text)') +
     stat('Taux occ.',     tauxOcc + '%',        tauxOcc > 80 ? 'var(--red)' : tauxOcc > 50 ? 'var(--amber)' : 'var(--green)') +
     stat('Pic journée',   pic,                  'var(--text)') +
-    stat('Incohérences',  nbIncoher,            nbIncoher  ? 'var(--amber)' : 'var(--green)') +
-    stat('Non trouvées',  nbNonTrouvee,         nbNonTrouvee ? 'var(--red)' : 'var(--green)') +
-    stat('Empilements',   nbStack,              nbStack    ? '#fb923c'      : 'var(--green)');
+    statBtn('Incohérences', nbIncoher,   nbIncoher   ? 'var(--amber)' : 'var(--green)', 'incoherence') +
+    statBtn('Non trouvées', nbNonTrouvee,nbNonTrouvee ? 'var(--red)'  : 'var(--green)', 'no_place') +
+    statBtn('Empilements',  nbStack,     nbStack     ? '#fb923c'      : 'var(--green)', 'stacking');
 }
 // ─── RENDER PROBLEMS ───────────────────────────────────────────────────────────
 function renderProblems() {
@@ -903,6 +912,52 @@ function renderMap() {
   grid.innerHTML = html;
 }
 
+// ─── POPOVER ───────────────────────────────────────────────────────────────────
+function openPopover(event, type) {
+  const problems = getProblems().filter(p => p.type === type);
+  if (!problems.length) return;
+
+  const titles = { incoherence: 'Incohérences', no_place: 'Place Non Trouvée', stacking: 'Empilements' };
+  document.getElementById('popover-title').textContent = titles[type] || type;
+
+  document.getElementById('popover-list').innerHTML = problems.map(p => {
+    const res = p.res;
+    const place = res.place_id ? placeById[res.place_id] : null;
+    const placeStr = place ? `${place.ligne}/Y${place.y}` : '—';
+    return `
+      <div onclick="selectProblem('${res.id}')" style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:8px;padding:9px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s"
+        onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border-lt)'">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+          <span class="pc-badge ${p.color}">${p.label}</span>
+          <span style="font-size:11px;font-weight:500;color:var(--text)">${res.client}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 10px">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)"><strong style="color:var(--text)">${res.booking_id}</strong></span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${placeStr}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${p.detail}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  const popover = document.getElementById('problems-popover');
+  const rect    = event.currentTarget.getBoundingClientRect();
+  const section = document.getElementById('dashboard-section').getBoundingClientRect();
+  popover.style.top  = (rect.bottom - section.top + 6) + 'px';
+  popover.style.left = (rect.left - section.left) + 'px';
+  popover.style.display = 'block';
+}
+
+function closePopover() {
+  document.getElementById('problems-popover').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  const popover = document.getElementById('problems-popover');
+  if (popover && !popover.contains(e.target) && !e.target.closest('[onclick*="openPopover"]')) {
+    closePopover();
+  }
+});
+  
 // ─── INTERACTIONS ──────────────────────────────────────────────────────────────
 function selectProblem(resId) {
   if (selectedResId === resId) {
@@ -923,7 +978,6 @@ function selectProblem(resId) {
     }
     else closePanel();
   }
-    renderProblems();
     renderMap();
 }
 
@@ -1451,7 +1505,6 @@ async function reload() {
     await Promise.all([loadPlaces(), loadReservations(), loadAllReservations()]);
     await loadOccupations();
     renderDashboard();
-    renderProblems();
     renderMap();
     document.getElementById('last-refresh').textContent =
       'Actualis\u00e9 \u00e0 ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
