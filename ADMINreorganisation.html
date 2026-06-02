@@ -891,7 +891,7 @@ function renderMap() {
             ? `${p.place_id} · Y${p.y} · ${res.booking_id} · ${res.statut}`
             : `${p.place_id} · Y${p.y} · Libre`;
 
-          html += `<div class="${cls}" onclick="onPlaceClick('${p.id}')" title="${title}">
+          html += `<div class="${cls}" onclick="onPlaceClick('${p.id}')" title="${title}" data-place-id="${p.id}">
             <span>${p.y}</span>
           </div>`;
         });
@@ -912,7 +912,15 @@ function selectProblem(resId) {
     selectedResId = resId;
     const res = reservationsRaw.find(r => r.id === resId);
     selectedPlaceId = res ? res.place_id : null;
-    if (res) openPanel(res, res.place_id ? placeById[res.place_id] : null);
+    if (res) {
+      openPanel(res, res.place_id ? placeById[res.place_id] : null);
+      if (res.place_id) {
+        setTimeout(() => {
+          const el = document.querySelector(`[data-place-id="${res.place_id}"]`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      }
+    }
     else closePanel();
   }
     renderProblems();
