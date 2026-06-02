@@ -335,7 +335,11 @@
   </div>
   
 <div style="border-bottom:1px solid var(--border);background:var(--surface);padding:8px 20px;flex-shrink:0;">
-    <input type="date" id="date-picker" style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;outline:none;">
+    <input type="date" id="date-picker" ...>
+    <input type="text" id="search-input" placeholder="Rechercher Booking ID ou client..." 
+      style="background:var(--surface2);border:1px solid var(--border-lt);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;outline:none;width:280px;margin-left:10px;"
+      oninput="onSearch(this.value)">
+    <div id="search-results" style="display:none;position:absolute;z-index:300;background:var(--surface);border:1px solid var(--border-lt);border-radius:8px;padding:6px;width:280px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px;"></div>
   </div>
 
 <!-- Popover problèmes -->
@@ -911,6 +915,66 @@ function renderMap() {
 
   grid.innerHTML = html;
 }
+
+  // ─── SEARCH ────────────────────────────────────────────────────────────────────
+function onSearch(val) {
+  const results = document.getElementById('search-results');
+  if (!val || val.length < 2) { results.style.display = 'none'; return; }
+
+  const q = val.toLowerCase();
+  const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
+  const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
+
+  const matches = Object.values(resByRecordId).filter(r => {
+    if (!r.arrivee || !r.retour) return false;
+    const debut = new Date(r.arrivee).getTime();
+    const fin   = new Date(r.retour).getTime();
+    if (debut > dayEnd || fin < dayStart) return false;
+    return r.booking_id.toLowerCase().includes(q) || (r.client || '').toLowerCase().includes(q);
+  }).slice(0, 10);
+
+  if (!matches.length) { results.style.display = 'none'; return; }
+
+  results.innerHTML = matches.map(r => {
+    const place = r.place_id ? placeById[r.place_id] : null;
+    const placeStr = place ? `${place.ligne}/Y${place.y}` : '—';
+    return `
+      <div onclick="selectFromSearch('${r.id}')"
+        style="padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .15s"
+        onmouseenter="this.style.background='var(--surface2)'"
+        onmouseleave="this.style.background='transparent'">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text)">${r.booking_id}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">${r.client} · ${placeStr} · ${r.statut}</div>
+      </div>`;
+  }).join('');
+
+  results.style.display = 'block';
+}
+
+function selectFromSearch(resId) {
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('search-input').value = '';
+  const res   = resByRecordId[resId];
+  const place = res?.place_id ? placeById[res.place_id] : null;
+  if (!res) return;
+  selectedResId   = resId;
+  selectedPlaceId = res.place_id || null;
+  openPanel(res, place);
+  renderMap();
+  if (place) {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-place-id="${res.place_id}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  }
+}
+
+document.addEventListener('click', e => {
+  const results = document.getElementById('search-results');
+  if (results && !results.contains(e.target) && e.target.id !== 'search-input') {
+    results.style.display = 'none';
+  }
+});
 
 // ─── POPOVER ───────────────────────────────────────────────────────────────────
 function openPopover(event, type) {
