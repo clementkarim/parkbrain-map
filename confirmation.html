@@ -639,7 +639,7 @@ async function loadAll() {
     fetchAll(CONFIG.TABLE_RESERVATIONS, [
       "Booking_ID", "Client_Booking_Ref",
       "Vehicule_Modele", "Vehicule_Couleur",
-      "DateHeure_Arrivee", "Place_Assignee_Ligne", "Place_Assignee_Y",
+      "DateHeure_Arrivee", "DateHeure_Retour", "Place_Assignee_Ligne", "Place_Assignee_Y",
       "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement"
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"]),
@@ -712,6 +712,11 @@ function render() {
     hour: "2-digit", minute: "2-digit"
   }) : "—";
 
+  const fmtFull = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {
+  day: "2-digit", month: "2-digit",
+  hour: "2-digit", minute: "2-digit"
+}) : "—";
+
   const html = allReservations.map(r => {
     const ligne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
     const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
@@ -721,7 +726,7 @@ return `
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
-            <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)}</div>
+            <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)} — Retour ${fmtFull(r.DateHeure_Retour)}</div>
           </div>
           <span class="badge ${r.Statut_Reservation === 'Zone Tampon' ? 'badge-zt' : 'badge-pending'}">
   ${r.Statut_Reservation === 'Zone Tampon' ? `🅿️ Zone Tampon${r.Zone_Tampon_Emplacement ? '<br><span style="font-size:0.65rem;font-weight:400;">' + r.Zone_Tampon_Emplacement + '</span>' : ''}` : 'À confirmer'}
