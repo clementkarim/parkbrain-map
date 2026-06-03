@@ -778,6 +778,15 @@ function buildResaHtml(f, couleur, titre) {
       <span class="modal-label">Services</span>
       <span class="modal-value">${services}</span>
     </div>
+    <div class="modal-row">
+      <span class="modal-label">Statut</span>
+      <span class="modal-value">${f.Statut_Reservation || "—"}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Incohérence</span>
+      <span class="modal-value" style="${f.Incoherence_Statut === 'A vérifier' ? 'color:var(--occupe);font-weight:700;' : ''}">${f.Incoherence_Statut || "OK"}</span>
+    </div>
+    
   `;
 }
 
