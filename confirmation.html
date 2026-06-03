@@ -674,7 +674,7 @@ Object.keys(placesIndex).forEach(k => {
     .filter(r => {
       const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
       const statut = r.fields.Statut_Reservation;
-      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée";
+      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée" && statut !== "Assignée - À déplacer";
     })
     .map(r => ({ id: r.id, ...r.fields }))
     .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
