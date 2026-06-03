@@ -550,6 +550,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 let allReservations = [];
 let placesIndex = {};
+let countIncoherences = 0;
+let countADeplacer = 0;
 let placesIndexX = {};
 let currentResaRecordId = null;
 let currentResaRef = null;
@@ -606,15 +608,20 @@ async function loadAll() {
   const dayStart = todayStr + "T00:00:00.000Z";
   const dayEnd   = todayStr + "T23:59:59.000Z";
 
-  const [resaRaw, placesRaw] = await Promise.all([
+  const [resaRaw, placesRaw, incoRaw, deplRaw] = await Promise.all([
     fetchAll(CONFIG.TABLE_RESERVATIONS, [
       "Booking_ID", "Client_Booking_Ref",
       "Vehicule_Modele", "Vehicule_Couleur",
       "DateHeure_Arrivee", "Place_Assignee_Ligne", "Place_Assignee_Y",
       "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement"
     ]),
-    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y","X"])
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"]),
+    fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Incoherence_Statut"], `{Incoherence_Statut} = "A vérifier"`),
+    fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Statut_Reservation"], `{Statut_Reservation} = "Assignée - À déplacer"`)
   ]);
+
+  countIncoherences = incoRaw.length;
+  countADeplacer = deplRaw.length;
 
   // Construire index Ligne_Terrain -> valeurs Y uniques triées
 placesIndex = {};
@@ -653,7 +660,15 @@ function render() {
   document.getElementById("stats").innerHTML = `
     <div class="stat">
       <div class="val" style="color:var(--warning)">${total}</div>
-      <div class="lbl">À confirmer</div>
+      <div class="lbl">IN à confirmer</div>
+    </div>
+    <div class="stat" onclick="window.top.location.href='https://sunshine55653.softr.app/traitement-incoh-rences'" style="cursor:pointer;">
+      <div class="val" style="color:var(--occupe)">${countIncoherences}</div>
+      <div class="lbl">Incohérences ↗</div>
+    </div>
+    <div class="stat" onclick="window.top.location.href='https://sunshine55653.softr.app/v-hicules-d-placer'" style="cursor:pointer;">
+      <div class="val" style="color:var(--accent)">${countADeplacer}</div>
+      <div class="lbl">À déplacer ↗</div>
     </div>
   `;
 
