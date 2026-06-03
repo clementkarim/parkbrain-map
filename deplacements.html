@@ -308,6 +308,61 @@
 
   .empty-icon { font-size: 2rem; margin-bottom: 8px; }
 
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .modal-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
   @media (max-width: 400px) {
     body { padding: 12px; }
   }
@@ -320,6 +375,7 @@ const CONFIG = {
   AIRTABLE_TOKEN: "patXZQyPJO5o5gCSw.78cbec65c472b8e5871b92ada98a3d7320980ed6184477348ab7733e34d807f1",
   BASE_ID:        "appTqMfNzSpj2yv7b",
   TABLE_RESERVATIONS: "tbldQLLisQm9aZciJ",
+  TABLE_PLACES:       "tbl06R7THmL2IvJcR",
   Y_MAX: 8,           // Profondeur max du parc
   POIDS_TEMPS: 0.6,   // Pondération urgence temporelle
   POIDS_Y: 0.4,       // Pondération profondeur
@@ -360,7 +416,37 @@ const CONFIG = {
 
 <script>
 let allDeplacements = [];
+let placesIndex = {};
+let placesIndexX = {};
+let currentDeplRecordId = null;
+let currentDeplResa = null;
 
+async function fetchAll(tableId, fields) {
+  let records = [], offset = "";
+  while (true) {
+    const params = new URLSearchParams();
+    fields.forEach(f => params.append("fields[]", f));
+    params.set("pageSize", "100");
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${tableId}?${params}`,
+      { headers: { Authorization: `Bearer ${CONFIG.AIRTABLE_TOKEN}` } }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Erreur ${res.status} — ${err.error?.message || tableId}`);
+    }
+
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    if (!data.offset) break;
+    offset = data.offset;
+  }
+  return records;
+}
+  
 async function fetchAllFiltered(tableId, fields, formula) {
   let records = [], offset = "";
   while (true) {
@@ -444,14 +530,32 @@ function getPriorityLabel(score) {
 async function loadAndRender() {
   document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div> Chargement...</div>`;
 
-  const resaRaw = await fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, [
+  const [resaRaw, placesRaw] = await Promise.all([
+    fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, [
     "Booking_ID", "Client_Booking_Ref",
     "Vehicule_Modele", "Vehicule_Couleur",
     "DateHeure_Retour", "Statut_Reservation",
     "Place_Assignee_Ligne", "Place_Assignee_Y",
     "Place_Terrain_Ligne", "Place_Terrain_Y",
     "Voiture_A_Deplacer", "Statut_Reservation"
-  ], `AND({Voiture_A_Deplacer} = TRUE(), {Statut_Reservation} = "Assignée - À déplacer", {Place_Terrain_Confirmee} = TRUE())`);
+  ], `AND({Voiture_A_Deplacer} = TRUE(), {Statut_Reservation} = "Assignée - À déplacer", {Place_Terrain_Confirmee} = TRUE())`),
+    fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"])
+  ]);
+
+  placesIndex = {};
+  placesIndexX = {};
+  placesRaw.forEach(r => {
+    const ligne = r.fields.Ligne_Terrain;
+    const y = r.fields.Y;
+    const x = r.fields.X;
+    if (!ligne || y == null) return;
+    if (!placesIndex[ligne]) placesIndex[ligne] = new Set();
+    placesIndex[ligne].add(y);
+    if (x != null && placesIndexX[ligne] == null) placesIndexX[ligne] = x;
+  });
+  Object.keys(placesIndex).forEach(k => {
+    placesIndex[k] = [...placesIndex[k]].sort((a, b) => a - b);
+  });
 
   allDeplacements = resaRaw
     .map(r => ({ id: r.id, ...r.fields }))
@@ -561,37 +665,145 @@ function render() {
 }
 
 // ─── Marquer déplacé ──────────────────────
-async function marquerDeplace(recordId) {
-  const btn = document.querySelector(`#card-${recordId} .btn-done`);
+function marquerDeplace(recordId) {
+  const resa = allDeplacements.find(r => r.id === recordId);
+  currentDeplRecordId = recordId;
+  currentDeplResa = resa;
+
+  const algoLigne = Array.isArray(resa.Place_Assignee_Ligne) ? resa.Place_Assignee_Ligne[0] : (resa.Place_Assignee_Ligne || "—");
+  const algoY     = Array.isArray(resa.Place_Assignee_Y)     ? resa.Place_Assignee_Y[0]     : (resa.Place_Assignee_Y ?? "—");
+  const terrLigne = resa.Place_Terrain_Ligne || "—";
+  const terrY     = resa.Place_Terrain_Y != null ? resa.Place_Terrain_Y : "—";
+
+  document.getElementById("deplModalSubtitle").innerHTML =
+    `Déplacement de <strong>${resa.Client_Booking_Ref || resa.Booking_ID}</strong> depuis <strong>${terrLigne} / Y${terrY}</strong> vers :`;
+  document.getElementById("deplAlgoPlace").textContent = `${algoLigne} — Y${algoY}`;
+
+  const lignes = Object.keys(placesIndex).sort((a, b) => (placesIndexX[a] ?? 9999) - (placesIndexX[b] ?? 9999));
+  const sel = document.getElementById("deplSelectLigne");
+  sel.innerHTML = `<option value="">Sélectionner une ligne...</option>`;
+  lignes.forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l;
+    opt.textContent = l;
+    sel.appendChild(opt);
+  });
+
+  const selY = document.getElementById("deplSelectY");
+  selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+  selY.disabled = true;
+  selY.style.opacity = "0.5";
+  document.getElementById("deplBtnSave").disabled = true;
+  document.getElementById("deplBtnSave").style.opacity = "0.5";
+
+  document.getElementById("deplModalOverlay").classList.add("open");
+}
+
+function onDeplLigneChange() {
+  const ligne = document.getElementById("deplSelectLigne").value;
+  const selY = document.getElementById("deplSelectY");
+
+  document.getElementById("deplBtnSave").disabled = true;
+  document.getElementById("deplBtnSave").style.opacity = "0.5";
+
+  if (!ligne) {
+    selY.innerHTML = `<option value="">Sélectionner d'abord une ligne...</option>`;
+    selY.disabled = true;
+    selY.style.opacity = "0.5";
+    return;
+  }
+
+  const yVals = placesIndex[ligne] || [];
+  selY.innerHTML = `<option value="">Sélectionner une profondeur...</option>`;
+  yVals.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `Profondeur ${y}`;
+    selY.appendChild(opt);
+  });
+
+  selY.disabled = false;
+  selY.style.opacity = "1";
+
+  selY.addEventListener("change", () => {
+    const enabled = !!selY.value;
+    document.getElementById("deplBtnSave").disabled = !enabled;
+    document.getElementById("deplBtnSave").style.opacity = enabled ? "1" : "0.5";
+  });
+}
+
+function closeDeplModal() {
+  document.getElementById("deplModalOverlay").classList.remove("open");
+  currentDeplRecordId = null;
+  currentDeplResa = null;
+}
+
+async function saveDeplacement() {
+  const ligne = document.getElementById("deplSelectLigne").value;
+  const y = document.getElementById("deplSelectY").value;
+  if (!ligne || !y) return;
+
+  const btn = document.getElementById("deplBtnSave");
   btn.disabled = true;
   btn.textContent = "Enregistrement...";
 
   try {
-    // Récupérer la résa pour avoir les valeurs algo
-    const resa = allDeplacements.find(r => r.id === recordId);
+    const resa = currentDeplResa;
     const algoLigne = Array.isArray(resa.Place_Assignee_Ligne) ? resa.Place_Assignee_Ligne[0] : (resa.Place_Assignee_Ligne || null);
-    const algoY     = Array.isArray(resa.Place_Assignee_Y)     ? resa.Place_Assignee_Y[0]     : (resa.Place_Assignee_Y     ?? null);
+    const algoY     = Array.isArray(resa.Place_Assignee_Y)     ? resa.Place_Assignee_Y[0]     : (resa.Place_Assignee_Y ?? null);
 
-    await patchRecord(CONFIG.TABLE_RESERVATIONS, recordId, {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentDeplRecordId, {
       "Voiture_A_Deplacer": false,
-      "Place_Terrain_Ligne": algoLigne,
-      "Place_Terrain_Y": algoY != null ? parseFloat(algoY) : null,
+      "Place_Terrain_Ligne": ligne,
+      "Place_Terrain_Y": parseFloat(y),
       "Place_Terrain_Confirmee": true,
       "Statut_Reservation": "Garée"
     });
 
-    allDeplacements = allDeplacements.filter(r => r.id !== recordId);
+    allDeplacements = allDeplacements.filter(r => r.id !== currentDeplRecordId);
+    closeDeplModal();
     render();
 
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = "✓ Déplacement effectué";
+    btn.textContent = "✓ Confirmer le déplacement";
     alert(`Erreur : ${e.message}`);
   }
 }
 
 loadAndRender();
 </script>
+<div class="modal-overlay" id="deplModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Confirmer le déplacement</div>
+      <button class="modal-close" onclick="closeDeplModal()">✕</button>
+    </div>
+    <div class="modal-subtitle" id="deplModalSubtitle"></div>
 
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:0.78rem;color:#1e40af;">
+      Place assignée par l'algo : <strong id="deplAlgoPlace"></strong>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:6px;">Ligne terrain</label>
+      <select id="deplSelectLigne" onchange="onDeplLigneChange()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:0.85rem;color:var(--text);font-family:inherit;outline:none;appearance:none;">
+        <option value="">Sélectionner une ligne...</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:6px;">Profondeur (Y)</label>
+      <select id="deplSelectY" disabled style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:0.85rem;color:var(--text);font-family:inherit;outline:none;appearance:none;opacity:0.5;">
+        <option value="">Sélectionner d'abord une ligne...</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button onclick="closeDeplModal()" style="flex:1;background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted);">Annuler</button>
+      <button id="deplBtnSave" onclick="saveDeplacement()" disabled style="flex:2;background:var(--success);color:white;border:none;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;opacity:0.5;">✓ Confirmer le déplacement</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
