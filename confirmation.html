@@ -644,7 +644,7 @@ async function loadAll() {
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"]),
     fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Incoherence_Statut"], `{Incoherence_Statut} = "A vérifier"`),
-    fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Statut_Reservation"], `{Statut_Reservation} = "Assignée - À déplacer"`)
+    fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Statut_Reservation"], `AND({Statut_Reservation} = "Assignée - À déplacer", {Place_Terrain_Confirmee} = TRUE())`)
   ]);
 
   countIncoherences = incoRaw.length;
