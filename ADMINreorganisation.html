@@ -1015,7 +1015,7 @@ function previewStandBy() {
     if (!r.arrivee) return false;
     const arr = new Date(r.arrivee).getTime();
     if (arr < dayStart || arr > dayEnd) return false;
-    if (r.statut === 'Gar\u00e9e' || r.statut === 'Stand-By') return false;
+    if (r.statut === 'Gar\u00e9e' || r.statut === 'Stand-By' || r.statut === 'Sortie' || r.statut === 'Annul\u00e9e') return false;
     if (!r.place_id) return false;
     if (zone) {
       const place = placeById[r.place_id];
