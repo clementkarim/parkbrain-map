@@ -569,7 +569,7 @@ async function loadReservations() {
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
     };
   });
-  console.log(reservationsRaw.map(r => ({ id: r.id, statut: r.statut })));
+
 }
 async function loadAllReservations() {
   const recs = await atFetch(
@@ -665,10 +665,7 @@ const res = resByRecordId[o.res_ids[0]];
       resEntrantByPlaceId[place.id] = res;
     }
   });
-  console.log('resByRecordId size:', Object.keys(resByRecordId).length);
-  console.log('occ sample res_ids:', occupationsRaw[0]?.res_ids);
-  console.log('occ sample place_record_id:', occupationsRaw[0]?.place_record_id);
-  console.log('resByPlaceId size:', Object.keys(resByPlaceId).length);
+  
 }
 
 // ─── PROBLEM DETECTION ─────────────────────────────────────────────────────────
@@ -799,7 +796,6 @@ function getFreePlacesForPeriod(arrivee, retour, excludeOccId) {
   return placesRaw.filter(p => !occupiedIds.has(p.id));
 }
 function renderDashboard() {
-  console.log('renderDashboard called, placesRaw:', placesRaw.length, 'occs:', occupationsRaw.length, 'el:', document.getElementById('dashboard-stats'));
   const dayStart = new Date(selectedDate + 'T00:00:00').getTime();
   const dayEnd   = new Date(selectedDate + 'T23:59:59').getTime();
 
@@ -1536,7 +1532,6 @@ function onNewYChange(currentLigne, currentY) {
 }
 
 function onDateChange(resId) {
-  console.log('onDateChange called, resId:', resId);
   const arrInput = document.getElementById('mod-arrivee');
   const retInput = document.getElementById('mod-retour');
   const info     = document.getElementById('date-conflict-info');
@@ -1544,7 +1539,6 @@ function onDateChange(resId) {
 
 const arrVal = arrInput.value;
   const retVal = retInput.value;
-  console.log('arrVal:', arrVal, '| retVal:', retVal);
   if (!arrVal || !retVal) { btn.disabled = true; return; }
 
   const newArr = new Date(arrVal).toISOString();
@@ -1604,9 +1598,7 @@ async function doReassign(resId, currentPlaceId, isGareeStr) {
   const isGaree  = isGareeStr === 'true';
   const ligne    = document.getElementById('new-ligne').value;
   const y        = Number(document.getElementById('new-y').value);
-  console.log('doReassign called:', { resId, ligne, y });
   const newPlace = placeByCode[`${ligne}_${y}`];
-  console.log('newPlace found:', newPlace);
   if (!newPlace) { toast('Place introuvable dans l\'index', 'err'); return; }
 
 const res = reservationsRaw.find(r => r.id === resId) || resByRecordId[resId];
@@ -1643,7 +1635,7 @@ if (res.occ_id) {
   
 } else {
       // Pas d'occupation → créer + lier
-      console.log('Création occupation pour resId:', resId, 'place:', newPlace.id, 'arrivee:', res.arrivee, 'retour:', res.retour);
+
 const occFields = {
         'R\u00e9servations': [resId],
         Place:             [newPlace.id],
@@ -1654,7 +1646,6 @@ const occFields = {
   
       if (res.parking_id) occFields.Parking = [res.parking_id];
 const newOcc = await postRecord(T_OCC, occFields);
-      console.log('Occupation créée:', newOcc);
       resPatch['Occupations 2'] = [newOcc.id];
       await patchRecord(T_RES, resId, resPatch);
     }
