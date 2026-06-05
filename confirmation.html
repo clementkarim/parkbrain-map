@@ -890,7 +890,7 @@ async function saveZT() {
 
   try {
     await patchRecord(CONFIG.TABLE_RESERVATIONS, currentZTRecordId, {
-      "Statut_Reservation": "Zone Tampon",
+      "ZT": true,
       "Zone_Tampon_Emplacement": emplacement
     });
     const idx = allReservations.findIndex(r => r.id === currentZTRecordId);
