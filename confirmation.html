@@ -640,7 +640,7 @@ async function loadAll() {
       "Booking_ID", "Client_Booking_Ref",
       "Vehicule_Modele", "Vehicule_Couleur",
       "DateHeure_Arrivee", "DateHeure_Retour", "Place_Assignee_Ligne", "Place_Assignee_Y",
-      "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement"
+      "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement", "ZT"
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"]),
     fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Incoherence_Statut"], `{Incoherence_Statut} = "A vérifier"`),
@@ -722,14 +722,14 @@ function render() {
     const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
 
 return `
-      <div class="resa-card ${r.Statut_Reservation === 'Zone Tampon' ? 'is-zt' : ''}" id="card-${r.id}">
+      <div class="resa-card ${r.ZT === true ? 'is-zt' : ''}" id="card-${r.id}">
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
             <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)} — Retour ${fmtFull(r.DateHeure_Retour)}</div>
           </div>
-          <span class="badge ${r.Statut_Reservation === 'Zone Tampon' ? 'badge-zt' : 'badge-pending'}">
-  ${r.Statut_Reservation === 'Zone Tampon' ? `🅿️ Zone Tampon${r.Zone_Tampon_Emplacement ? '<br><span style="font-size:0.65rem;font-weight:400;">' + r.Zone_Tampon_Emplacement + '</span>' : ''}` : 'À confirmer'}
+          <span class="badge ${r.ZT === true ? 'badge-zt' : 'badge-pending'}">
+  ${r.ZT === true ? `🅿️ Zone Tampon${r.Zone_Tampon_Emplacement ? '<br><span style="font-size:0.65rem;font-weight:400;">' + r.Zone_Tampon_Emplacement + '</span>' : ''}` : 'À confirmer'}
 </span>
         </div>
         <div class="resa-details">
