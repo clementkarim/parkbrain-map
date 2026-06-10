@@ -834,8 +834,12 @@ function renderDashboard() {
   const nbIncoher    = problems.filter(p => p.type === 'incoherence').length;
   const nbNonTrouvee = problems.filter(p => p.type === 'no_place').length;
   const nbStack      = problems.filter(p => p.type === 'stacking').length;
-  const nbZT = resasActives.filter(r => r.statut === 'ZT - Assign\u00e9e').length;
-
+  const nbZT = Object.values(resByRecordId).filter(r => {
+    if (!r.arrivee || !r.retour) return false;
+    const debut = new Date(r.arrivee).getTime();
+    const fin   = new Date(r.retour).getTime();
+    return debut <= dayEnd && fin >= dayStart && r.statut === 'ZT - Assign\u00e9e';
+  }).length;
 const statBtn = (label, value, color, type) => `
     <div onclick="openPopover(event, '${type}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:100px;cursor:${value > 0 ? 'pointer' : 'default'};transition:border-color .15s"
       ${value > 0 ? `onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border)'"` : ''}>
