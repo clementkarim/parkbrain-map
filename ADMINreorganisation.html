@@ -834,6 +834,7 @@ function renderDashboard() {
   const nbIncoher    = problems.filter(p => p.type === 'incoherence').length;
   const nbNonTrouvee = problems.filter(p => p.type === 'no_place').length;
   const nbStack      = problems.filter(p => p.type === 'stacking').length;
+  const nbZT = resasActives.filter(r => r.statut === 'ZT - Assign\u00e9e').length;
 
 const statBtn = (label, value, color, type) => `
     <div onclick="openPopover(event, '${type}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:100px;cursor:${value > 0 ? 'pointer' : 'default'};transition:border-color .15s"
@@ -856,7 +857,8 @@ const statBtn = (label, value, color, type) => `
     stat('Pic journée',   pic,                  'var(--text)') +
     statBtn('Incohérences', nbIncoher,   nbIncoher   ? 'var(--amber)' : 'var(--green)', 'incoherence') +
     statBtn('Non trouvées', nbNonTrouvee,nbNonTrouvee ? 'var(--red)'  : 'var(--green)', 'no_place') +
-    statBtn('Empilements',  nbStack,     nbStack     ? '#fb923c'      : 'var(--green)', 'stacking');
+    statBtn('Empilements',  nbStack,     nbStack     ? '#fb923c'      : 'var(--green)', 'stacking') +
+    stat('Zone Tampon',     nbZT,        nbZT        ? '#e879f9'      : 'var(--green)');
   
   updateStandByBadge();
 }
