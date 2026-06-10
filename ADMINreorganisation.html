@@ -937,7 +937,9 @@ function renderMap() {
          const statut    = getStatutAtDate(p.place_id, selectedDate);
       const res       = resByPlaceId[p.id];
       const isProblem = problemPlaceIds.has(p.id);
-      const isZT      = res && res.statut === 'ZT - Assign\u00e9e';
+      const resEntrant = resEntrantByPlaceId[p.id];
+      const isZT       = (res && res.statut === 'ZT - Assign\u00e9e') || 
+                         (resEntrant && resEntrant.statut === 'ZT - Assign\u00e9e');
       const isSelected = selectedPlaceId === p.id ||
         (selectedResId && res && res.id === selectedResId);
 
