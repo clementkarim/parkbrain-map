@@ -159,7 +159,7 @@
   
   }
   .badge-zt-assignee { background: #ede9fe; color: #5b21b6; }
-
+  .badge-pnt { background: #fee2e2; color: #991b1b; }
   .badge-pending {
     background: #fef3c7;
     color: #92400e;
@@ -675,7 +675,7 @@ Object.keys(placesIndex).forEach(k => {
     .filter(r => {
       const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
       const statut = r.fields.Statut_Reservation;
-      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée" && statut !== "Assignée - À déplacer";
+      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée" && statut !== "Assignée - À déplacer" && statut !== "Sortie" && statut !== "Annulée";
     })
     .map(r => ({ id: r.id, ...r.fields }))
     .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
@@ -729,9 +729,10 @@ return `
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
             <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)} — Retour ${fmtFull(r.DateHeure_Retour)}</div>
 ${r.Statut_Reservation === 'ZT - Assignée' ? `<div style="margin-top:6px;padding:8px 10px;background:#ede9fe;border-radius:6px;font-size:0.78rem;color:#5b21b6;font-weight:600;">🕐 Place disponible à partir de ${fmtFull(r.Date_Heure_Cible)} — Mettre le véhicule en ZT d'ici là</div>` : ''}
+${r.Statut_Reservation === 'Place Non Trouvée' ? `<div style="margin-top:6px;padding:8px 10px;background:#fee2e2;border-radius:6px;font-size:0.78rem;color:#991b1b;font-weight:600;">❌ Cette réservation n'a pas encore de place assignée — Merci de bien vouloir la mettre en ZT avant confirmation de la place définitive</div>` : ''}
           </div>
-          <span class="badge ${r.ZT === true ? 'badge-zt' : r.Statut_Reservation === 'ZT - Assignée' ? 'badge-zt-assignee' : 'badge-pending'}">
-  ${r.ZT === true ? '🅿️ Zone Tampon' : r.Statut_Reservation === 'ZT - Assignée' ? '🕐 ZT - Assignée' : 'À confirmer'}
+          <span class="badge ${r.ZT === true ? 'badge-zt' : r.Statut_Reservation === 'ZT - Assignée' ? 'badge-zt-assignee' : r.Statut_Reservation === 'Place Non Trouvée' ? 'badge-pnt' : 'badge-pending'}">
+  ${r.ZT === true ? '🅿️ Zone Tampon' : r.Statut_Reservation === 'ZT - Assignée' ? '🕐 ZT - Assignée' : r.Statut_Reservation === 'Place Non Trouvée' ? '❌ Place Non Trouvée' : 'À confirmer'}
 </span>
         </div>
         <div class="resa-details">
