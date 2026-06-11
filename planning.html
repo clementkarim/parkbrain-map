@@ -520,6 +520,7 @@ const CONFIG = {
   <option value="">Tous</option>
   <option value="in">🟢 IN — Entrées</option>
   <option value="out">🔴 OUT — Sorties</option>
+  <option value="ZT - Assignée">🕐 ZT - Assignée</option>
   <option value="Garée">✅ Garées</option>
   <option value="non-garee">⏳ Non Garées</option>
   <option value="incoherence">⚠️ Incohérences</option>
@@ -646,7 +647,8 @@ async function loadAndRender() {
       "DateHeure_Arrivee", "DateHeure_Retour",
       "Statut_Reservation", "Incoherence_Statut",
       "Place_Assignee_Ligne", "Place_Assignee_Y",
-      "Place_Terrain_Ligne", "Place_Terrain_Y"
+      "Place_Terrain_Ligne", "Place_Terrain_Y",
+      "Date_Heure_Cible"
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y","X"])
   ]);
@@ -794,6 +796,7 @@ const isArrivee = arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd;
     let badge = "";
     if (hasIncoherence) badge = `<span class="badge badge-incoherence">⚠️ Incohérence</span>`;
     else if (r.Statut_Reservation === "Garée") badge = `<span class="badge badge-garee">✅ Garée</span>`;
+    else if (r.Statut_Reservation === "ZT - Assignée") badge = `<span class="badge" style="background:#ede9fe;color:#5b21b6;">🕐 ZT - Assignée</span>`;
     else badge = `<span class="badge badge-attente">${r.Statut_Reservation || "En attente"}</span>`;
 
     return `
@@ -806,6 +809,7 @@ const isArrivee = arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd;
   &nbsp;—&nbsp;
   <span style="color:var(--incoherence);font-weight:600;">↑ ${fmtFull(r.DateHeure_Retour)}</span>
 </div>
+${r.Statut_Reservation === 'ZT - Assignée' && r.Date_Heure_Cible ? `<div style="margin-top:6px;padding:6px 10px;background:#ede9fe;border-radius:6px;font-size:0.75rem;color:#5b21b6;font-weight:600;">🕐 Place disponible à partir de ${fmtFull(r.Date_Heure_Cible)}</div>` : ''}
           </div>
           ${badge}
         </div>
