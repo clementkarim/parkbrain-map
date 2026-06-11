@@ -164,7 +164,8 @@
     .place-circle.occupied  { background: var(--red-dim); color: var(--red); border-color: var(--red-b); }
     .place-circle.garee   { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-b); }
     .place-circle.problem { background: var(--red); color: #fff; border-color: var(--red); animation: pulse-problem 2s infinite; }
-    .place-circle.zt        { background: rgba(217,70,239,.1); color: #e879f9; border-color: rgba(217,70,239,.25); }
+    .place-circle.zt        { background: linear-gradient(90deg, var(--amber-dim) 50%, rgba(217,70,239,.1) 50%); color: #e879f9; border-color: rgba(217,70,239,.25); }
+    .place-circle.zt-seul   { background: rgba(217,70,239,.1); color: #e879f9; border-color: rgba(217,70,239,.25); }
     .place-circle.arrivee   { background: var(--blue-dim); color: var(--blue); border-color: var(--blue-b); }
     .place-circle.depart    { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-b); }
     .place-circle.transition { background: linear-gradient(90deg, var(--amber-dim) 50%, var(--blue-dim) 50%); color: var(--text); border-color: var(--border-lt); }
@@ -938,19 +939,21 @@ function renderMap() {
       .forEach(ligne => {
         html += `<div class="map-line"><div class="line-label">${ligne}</div><div class="line-places">`;
         zoneMap[zone][ligne].sort((a, b) => a.y - b.y).forEach(p => {
-         const statut    = getStatutAtDate(p.place_id, selectedDate);
-      const res       = resByPlaceId[p.id];
-      const isProblem = problemPlaceIds.has(p.id);
+      const statut     = getStatutAtDate(p.place_id, selectedDate);
+      const res        = resByPlaceId[p.id];
+      const isProblem  = problemPlaceIds.has(p.id);
       const resEntrant = resEntrantByPlaceId[p.id];
-      const isZT       = (res && res.statut === 'ZT - Assign\u00e9e') || 
-                         (resEntrant && resEntrant.statut === 'ZT - Assign\u00e9e');
+      const isZTEntrant = !!(resEntrant && resEntrant.statut === 'ZT - Assign\u00e9e' &&
+        resEntrant.arrivee && resEntrant.arrivee.startsWith(selectedDate));
+      const isZT       = isZTEntrant && !!res;
+      const isZTSeul   = isZTEntrant && !res;
       const isSelected = selectedPlaceId === p.id ||
         (selectedResId && res && res.id === selectedResId);
-
       let cls = 'place-circle';
       if (isSelected)                   cls += ' selected';
       else if (isProblem)               cls += ' problem';
       else if (isZT)                    cls += ' zt';
+      else if (isZTSeul)                cls += ' zt-seul';
       else if (statut === 'transition') cls += ' transition';
       else if (statut === 'depart')     cls += ' depart';
       else if (statut === 'arrivee')    cls += ' arrivee';
