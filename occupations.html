@@ -258,7 +258,15 @@
     background: linear-gradient(90deg, var(--depart) 50%, var(--arrivee) 50%);
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
+  .spot.zt-assignee {
+    background: #7c3aed;
+    box-shadow: 0 2px 6px rgba(124,58,237,0.3);
+  }
 
+  .spot.transition-zt {
+    background: linear-gradient(90deg, var(--depart) 50%, #7c3aed 50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
   .spot.vide {
     background: transparent;
     box-shadow: none;
@@ -482,6 +490,14 @@ const CONFIG = {
       Arrivée + Départ
     </div>
     <div class="legend-item">
+      <div class="legend-dot" style="background:#7c3aed"></div>
+      ZT - Assignée
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:linear-gradient(90deg, var(--depart) 50%, #7c3aed 50%)"></div>
+      ZT + Départ
+    </div>
+    <div class="legend-item">
       <div class="legend-dot" style="background:var(--occupe)"></div>
       Occupée
     </div>
@@ -552,10 +568,11 @@ async function loadAll() {
       "Place_ID", "Date_Debut", "Date_Fin", "Statut_Occupation", "Réservations"
     ]),
     fetchAll("Réservations", [
-      "Booking_ID", "Client_Booking_Ref", "Place_Assignee_Code",
-      "DateHeure_Arrivee", "DateHeure_Retour",
-      "Vehicule_Modele", "Vehicule_Couleur", "Services"
-    ])
+  "Booking_ID", "Client_Booking_Ref", "Place_Assignee_Code",
+  "DateHeure_Arrivee", "DateHeure_Retour",
+  "Vehicule_Modele", "Vehicule_Couleur", "Services",
+  "Statut_Reservation", "Date_Heure_Cible"
+])
   ]);
 
   allPlaces = placesRaw.map(r => r.fields);
@@ -606,9 +623,12 @@ function getStatutAtDate(placeId, dateStr) {
 
   const hasDepart  = occs.some(o => new Date(o.Date_Fin).getTime() >= dayStart && new Date(o.Date_Fin).getTime() <= dayEnd);
   const hasArrivee = !!resaEntrant;
+  const isZTAssignee = resaEntrant && resaEntrant.Statut_Reservation === "ZT - Assignée";
 
+  if (hasDepart && hasArrivee && isZTAssignee) return "transition-zt";
   if (hasDepart && hasArrivee) return "transition";
   if (hasDepart) return "depart";
+  if (hasArrivee && isZTAssignee) return "zt-assignee";
   if (hasArrivee) return "arrivee";
   if (occs.length > 0) return "occupe";
   return "libre";
@@ -778,6 +798,10 @@ function buildResaHtml(f, couleur, titre) {
       <span class="modal-label">Services</span>
       <span class="modal-value">${services}</span>
     </div>
+    ${f.Statut_Reservation === 'ZT - Assignée' && f.Date_Heure_Cible ? `
+    <div style="margin-top:8px;padding:8px 10px;background:#ede9fe;border-radius:6px;font-size:0.78rem;color:#5b21b6;font-weight:600;">
+      🕐 Place disponible à partir de ${new Date(f.Date_Heure_Cible).toLocaleDateString("fr-FR", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+    </div>` : ''}
     <div class="modal-row">
       <span class="modal-label">Statut</span>
       <span class="modal-value">${f.Statut_Reservation || "—"}</span>
