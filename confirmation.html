@@ -158,6 +158,7 @@
     background: #fef3c7; color: #92400e; 
   
   }
+  .badge-zt-assignee { background: #ede9fe; color: #5b21b6; }
 
   .badge-pending {
     background: #fef3c7;
@@ -640,7 +641,7 @@ async function loadAll() {
       "Booking_ID", "Client_Booking_Ref",
       "Vehicule_Modele", "Vehicule_Couleur",
       "DateHeure_Arrivee", "DateHeure_Retour", "Place_Assignee_Ligne", "Place_Assignee_Y",
-      "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement", "ZT"
+      "Statut_Reservation", "Place_Terrain_Confirmee", "Zone_Tampon_Emplacement", "ZT", "Date_Heure_Cible"
     ]),
     fetchAll(CONFIG.TABLE_PLACES, ["Ligne_Terrain", "Y", "X"]),
     fetchAllFiltered(CONFIG.TABLE_RESERVATIONS, ["Incoherence_Statut"], `{Incoherence_Statut} = "A vérifier"`),
@@ -727,9 +728,10 @@ return `
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
             <div class="resa-time">Arrivée ${fmt(r.DateHeure_Arrivee)} — Retour ${fmtFull(r.DateHeure_Retour)}</div>
+${r.Statut_Reservation === 'ZT - Assignée' ? `<div style="margin-top:6px;padding:8px 10px;background:#ede9fe;border-radius:6px;font-size:0.78rem;color:#5b21b6;font-weight:600;">🕐 Place disponible à partir de ${fmtFull(r.Date_Heure_Cible)} — Mettre le véhicule en ZT d'ici là</div>` : ''}
           </div>
-          <span class="badge ${r.ZT === true ? 'badge-zt' : 'badge-pending'}">
-  ${r.ZT === true ? `🅿️ Zone Tampon${r.Zone_Tampon_Emplacement ? '<br><span style="font-size:0.65rem;font-weight:400;">' + r.Zone_Tampon_Emplacement + '</span>' : ''}` : 'À confirmer'}
+          <span class="badge ${r.ZT === true ? 'badge-zt' : r.Statut_Reservation === 'ZT - Assignée' ? 'badge-zt-assignee' : 'badge-pending'}">
+  ${r.ZT === true ? '🅿️ Zone Tampon' : r.Statut_Reservation === 'ZT - Assignée' ? '🕐 ZT - Assignée' : 'À confirmer'}
 </span>
         </div>
         <div class="resa-details">
