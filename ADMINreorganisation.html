@@ -534,7 +534,7 @@ async function loadReservations() {
     T_RES,
     `OR(IS_SAME({DateHeure_Arrivee}, '${selectedDate}', 'day'), IS_SAME({DateHeure_Retour}, '${selectedDate}', 'day'))`,
     [
-      'Booking_ID', 'Client_Booking_Ref', 'Place_Terrain_Ligne', 'Place_Terrain_Y', 'Date_Heure_Cible', 'Place_Assignee_Code',
+      'Booking_ID', 'Client_Booking_Ref', 'Place_Terrain_Ligne', 'Place_Terrain_Y', 'Date_Heure_Cible', 'Services', 'Place_Assignee_Code',
       'Statut_Reservation', 'Scenario_Assignation',
       'Place_Assignee_Algo', 'Place_Assignee_Ligne', 'Place_Assignee_Y',
       'DateHeure_Arrivee', 'DateHeure_Retour',
@@ -568,6 +568,7 @@ async function loadReservations() {
       terrain_ligne: f.Place_Terrain_Ligne || null,
       terrain_y:     f.Place_Terrain_Y ?? null,
       heure_cible:   f.Date_Heure_Cible || null,
+      services:      Array.isArray(f.Services) ? f.Services.join(', ') : (f.Services || '—'),
       place_code:  Array.isArray(f.Place_Assignee_Code) ? f.Place_Assignee_Code[0] : (f.Place_Assignee_Code || null),
       type_jour:   (f.DateHeure_Arrivee?.startsWith(selectedDate) && f.DateHeure_Retour?.startsWith(selectedDate)) ? 'arrivee+retour' : f.DateHeure_Arrivee?.startsWith(selectedDate) ? 'arrivee' : 'retour',
       parking_id:  Array.isArray(f.Parking) ? f.Parking[0] : null,
@@ -584,7 +585,7 @@ async function loadAllReservations() {
      'DateHeure_Arrivee', 'DateHeure_Retour',
      'Incoherence_Statut', 'Voiture_A_Deplacer',
      'Occupations 2', 'Parking', 'Place_Assignee_Code',
-     'Place_Terrain_Ligne', 'Place_Terrain_Y', 'Date_Heure_Cible']
+     'Place_Terrain_Ligne', 'Place_Terrain_Y', 'Date_Heure_Cible', 'Services']
   );
   resByRecordId = {};
   recs.forEach(r => {
@@ -609,6 +610,7 @@ async function loadAllReservations() {
       terrain_ligne:   f.Place_Terrain_Ligne || null,
       terrain_y:       f.Place_Terrain_Y ?? null,
       heure_cible:     f.Date_Heure_Cible || null,
+      services:        Array.isArray(f.Services) ? f.Services.join(', ') : (f.Services || '—'),
     };
   });
 }
@@ -1351,6 +1353,9 @@ const isGaree  = res.statut === 'Gar\u00e9e';
         <div class="info-item"><span>Retour</span><strong>${fmtDate(res.retour)}</strong></div>
         <div class="info-item"><span>Place assign\u00e9e</span><strong>${placeStr}</strong></div>
         <div class="info-item"><span>Occupation</span>
+        <div class="info-item" style="grid-column:1/-1"><span>Services</span>
+            <strong class="${res.services !== '—' ? 'text-blue' : ''}">${res.services}</strong>
+          </div>
           <strong class="${res.occ_id ? 'text-green' : 'text-red'}">${res.occ_id ? '✓ Li\u00e9e' : '— Absente'}</strong>
         </div>
         ${res.statut === 'ZT - Assign\u00e9e' ? `<div class="info-item" style="grid-column:1/-1;background:rgba(217,70,239,.08);border:1px solid rgba(217,70,239,.25);border-radius:7px;padding:8px 10px">
