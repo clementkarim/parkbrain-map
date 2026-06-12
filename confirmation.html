@@ -674,9 +674,12 @@ async function loadAll() {
 
   countIncoherences = incoRaw.length;
   countADeplacer = deplRaw.length;
+  const _selectedDate = document.getElementById("filterDate")?.value || todayStr;
+  const _dayStartTs = new Date(_selectedDate + "T00:00:00").getTime();
+  const _dayEndTs   = new Date(_selectedDate + "T23:59:59").getTime();
   countSorties = allReservations.filter(r => {
     const retour = r.DateHeure_Retour ? new Date(r.DateHeure_Retour).getTime() : null;
-    return retour && retour >= dayStartTs && retour <= dayEndTs && r.Statut_Reservation !== "Sortie" && r.Statut_Reservation !== "Annulée";
+    return retour && retour >= _dayStartTs && retour <= _dayEndTs && r.Statut_Reservation !== "Sortie" && r.Statut_Reservation !== "Annulée";
   }).length;
 
   // Construire index Ligne_Terrain -> valeurs Y uniques triées
@@ -718,7 +721,7 @@ function render() {
 
   document.getElementById("stats").innerHTML = `
     <div class="stat">
-      <div class="val" style="color:var(--warning)">${total}</div>
+      <div class="val" style="color:var(--warning)">${allReservations.filter(r => { const ts = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null; const d = document.getElementById("filterDate")?.value || todayStr; const s = new Date(d + "T00:00:00").getTime(); const e = new Date(d + "T23:59:59").getTime(); return ts && ts >= s && ts <= e; }).length}</div>
       <div class="lbl">IN à confirmer</div>
     </div>
     <div class="stat" onclick="window.top.location.href='https://sunshine55653.softr.app/traitement-incoh-rences'" style="cursor:pointer;">
