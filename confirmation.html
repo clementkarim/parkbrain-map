@@ -576,6 +576,7 @@ let allReservations = [];
 let placesIndex = {};
 let countIncoherences = 0;
 let countADeplacer = 0;
+let countSorties = 0;
 let placesIndexX = {};
 let currentResaRecordId = null;
 let currentResaRef = null;
@@ -673,6 +674,10 @@ async function loadAll() {
 
   countIncoherences = incoRaw.length;
   countADeplacer = deplRaw.length;
+  countSorties = allReservations.filter(r => {
+    const retour = r.DateHeure_Retour ? new Date(r.DateHeure_Retour).getTime() : null;
+    return retour && retour >= dayStartTs && retour <= dayEndTs && r.Statut_Reservation !== "Sortie" && r.Statut_Reservation !== "Annulée";
+  }).length;
 
   // Construire index Ligne_Terrain -> valeurs Y uniques triées
 placesIndex = {};
@@ -723,6 +728,10 @@ function render() {
     <div class="stat" onclick="window.top.location.href='https://sunshine55653.softr.app/v-hicules-d-placer'" style="cursor:pointer;">
       <div class="val" style="color:var(--accent)">${countADeplacer}</div>
       <div class="lbl">À déplacer ↗</div>
+    </div>
+    <div class="stat">
+      <div class="val" style="color:var(--occupe)">${countSorties}</div>
+      <div class="lbl">OUT à confirmer</div>
     </div>
   `;
 
