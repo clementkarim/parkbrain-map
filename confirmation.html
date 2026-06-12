@@ -118,7 +118,9 @@
   border-left: 4px solid var(--warning);
   background: #fffbeb;
 }
-
+.resa-card.is-sortie {
+  border-left: 4px solid var(--occupe);
+}
   .resa-card.confirmed {
     border-color: var(--success);
     background: #f0fdf4;
@@ -240,6 +242,22 @@
 }
 
 .btn-zt:hover { background: #d97706; }
+.btn-sortie {
+  flex: 1;
+  background: var(--occupe);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.btn-sortie:hover { background: #dc2626; }
   /* Loading / Error */
   .loading {
     display: flex;
@@ -679,8 +697,11 @@ Object.keys(placesIndex).forEach(k => {
   allReservations = resaRaw
     .filter(r => {
       const arrivee = r.fields.DateHeure_Arrivee ? new Date(r.fields.DateHeure_Arrivee).getTime() : null;
+      const retour  = r.fields.DateHeure_Retour  ? new Date(r.fields.DateHeure_Retour).getTime()  : null;
       const statut = r.fields.Statut_Reservation;
-      return arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée" && statut !== "Assignée - À déplacer" && statut !== "Sortie" && statut !== "Annulée";
+      const isArrivee = arrivee && arrivee >= dayStartTs && arrivee <= dayEndTs && statut !== "Garée" && statut !== "Assignée - À déplacer" && statut !== "Sortie" && statut !== "Annulée";
+      const isSortie  = retour  && retour  >= dayStartTs && retour  <= dayEndTs && statut !== "Sortie" && statut !== "Annulée";
+      return isArrivee || isSortie;
     })
     .map(r => ({ id: r.id, ...r.fields }))
     .sort((a, b) => new Date(a.DateHeure_Arrivee) - new Date(b.DateHeure_Arrivee));
@@ -724,11 +745,18 @@ function render() {
 }) : "—";
 
   const html = allReservations.map(r => {
+    const selectedDate = document.getElementById("filterDate")?.value || todayStr;
+    const dayStart = new Date(selectedDate + "T00:00:00").getTime();
+    const dayEnd   = new Date(selectedDate + "T23:59:59").getTime();
+    const arriveeTs = r.DateHeure_Arrivee ? new Date(r.DateHeure_Arrivee).getTime() : null;
+    const retourTs  = r.DateHeure_Retour  ? new Date(r.DateHeure_Retour).getTime()  : null;
+    const isArrivee = arriveeTs && arriveeTs >= dayStart && arriveeTs <= dayEnd;
+    const isSortie  = retourTs  && retourTs  >= dayStart && retourTs  <= dayEnd && !isArrivee;
     const ligne = Array.isArray(r.Place_Assignee_Ligne) ? r.Place_Assignee_Ligne[0] : (r.Place_Assignee_Ligne || "—");
     const y = Array.isArray(r.Place_Assignee_Y) ? r.Place_Assignee_Y[0] : (r.Place_Assignee_Y || "—");
 
 return `
-      <div class="resa-card ${r.ZT === true ? 'is-zt' : ''}" id="card-${r.id}">
+      <div class="resa-card ${r.ZT === true ? 'is-zt' : isSortie ? 'is-sortie' : ''}" id="card-${r.id}">
         <div class="resa-top">
           <div>
             <div class="resa-ref">${r.Client_Booking_Ref || r.Booking_ID || "—"}</div>
@@ -759,13 +787,19 @@ ${r.Statut_Reservation === 'Place Non Trouvée' ? `<div style="margin-top:6px;pa
           </div>
         </div>
         <div class="resa-actions">
-          <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
-            📍 Confirmer la place
-          </button>
-          <button class="btn-zt" onclick="openZTModal('${r.id}')">
-  🅿️ ZT
-</button>
-        </div>
+  ${isSortie ? `
+    <button class="btn-sortie" onclick="openSortieModal('${r.id}', '${(r.Client_Booking_Ref || r.Booking_ID || '').replace(/'/g, '')}')">
+      🚗 Confirmer la sortie
+    </button>
+  ` : `
+    <button class="btn-confirm" onclick="openModal('${r.id}', '${r.Client_Booking_Ref || r.Booking_ID}', '${ligne}', '${y}')">
+      📍 Confirmer la place
+    </button>
+    <button class="btn-zt" onclick="openZTModal('${r.id}')">
+      🅿️ ZT
+    </button>
+  `}
+</div>
       </div>
     `;
   }).join("");
@@ -911,7 +945,39 @@ async function saveZT() {
     alert(`Erreur : ${e.message}`);
   }
 }
-  
+  let currentSortieRecordId = null;
+
+function openSortieModal(recordId, ref) {
+  currentSortieRecordId = recordId;
+  document.getElementById("sortieModalSubtitle").textContent = ref;
+  document.getElementById("sortieModalOverlay").classList.add("open");
+}
+
+function closeSortieModal() {
+  document.getElementById("sortieModalOverlay").classList.remove("open");
+  currentSortieRecordId = null;
+}
+
+async function saveSortie() {
+  const btn = document.getElementById("btnSaveSortie");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+
+  try {
+    await patchRecord(CONFIG.TABLE_RESERVATIONS, currentSortieRecordId, {
+      "Statut_Reservation": "Sortie"
+    });
+
+    allReservations = allReservations.filter(r => r.id !== currentSortieRecordId);
+    closeSortieModal();
+    render();
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "✓ Confirmer la sortie";
+    alert(`Erreur : ${e.message}`);
+  }
+}
   async function refresh() {
   try {
     await loadAll();
@@ -942,6 +1008,22 @@ refresh();
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeZTModal()">Annuler</button>
       <button class="btn-save" onclick="saveZT()" id="btnSaveZT">✓ Valider</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="sortieModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Confirmer la sortie</div>
+      <button class="modal-close" onclick="closeSortieModal()">✕</button>
+    </div>
+    <div class="modal-subtitle" id="sortieModalSubtitle"></div>
+    <div style="padding:12px;background:#fee2e2;border-radius:8px;font-size:0.82rem;color:#991b1b;font-weight:600;margin-bottom:16px;">
+      🚗 Ce véhicule est bien sorti du parc ?
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button onclick="closeSortieModal()" style="flex:1;background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted);">Annuler</button>
+      <button id="btnSaveSortie" onclick="saveSortie()" style="flex:2;background:var(--occupe);color:white;border:none;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">✓ Confirmer la sortie</button>
     </div>
   </div>
 </div>
